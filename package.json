@@ -1,6 +1,6 @@
 {
   "name": "repo-ai-cli",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "AI-powered repo helper CLI: bilingual README + conventional commits",
   "main": "./dist/index.js",
   "scripts": {
@@ -20,10 +20,12 @@
   "license": "MIT",
   "type": "module",
   "bin": {
-    "repo-ai-cli": "./dist/index.js"
+    "repo-ai-cli": "dist/index.js"
   },
   "types": "./dist/index.d.ts",
-  "files": "[\"dist\"]",
+  "files": [
+    "dist"
+  ],
   "engines": {
     "node": ">=20"
   },
