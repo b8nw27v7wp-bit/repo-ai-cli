@@ -24,6 +24,10 @@ program
   .option("--dry-run", "print stats only, do not call API")
   .option("--max-tokens <n>", "token budget", (v) => parseInt(v, 10), 48000)
   .option("--max-file-kb <n>", "max single-file size in KB", (v) => parseInt(v, 10), 100)
+  .option("--provider <id>", "LLM provider: deepseek|openai|moonshot|zhipu|qwen|minimax|xai|siliconflow")
+  .option("--base-url <url>", "custom OpenAI-compatible endpoint (overrides provider)")
+  .option("--model <name>", "model name (overrides provider default)")
+  .option("--api-key <key>", "API key (prefer env vars; avoid in shell history)")
   .action(async (target: string, opts: Record<string, unknown>) => {
     try {
       await runReadme({
@@ -33,6 +37,10 @@ program
         dryRun: Boolean(opts.dryRun),
         maxTokens: opts.maxTokens as number,
         maxFileKb: opts.maxFileKb as number,
+        provider: opts.provider as string | undefined,
+        baseUrl: opts.baseUrl as string | undefined,
+        model: opts.model as string | undefined,
+        apiKey: opts.apiKey as string | undefined,
       });
     } catch (err) {
       handleError(err);
@@ -47,6 +55,10 @@ program
   .option("--print", "print message without interaction")
   .option("--type <type>", "force commit type (feat/fix/docs/...)")
   .option("--max-diff-kb <n>", "max diff size in KB", (v) => parseInt(v, 10), 200)
+  .option("--provider <id>", "LLM provider: deepseek|openai|moonshot|zhipu|qwen|minimax|xai|siliconflow")
+  .option("--base-url <url>", "custom OpenAI-compatible endpoint (overrides provider)")
+  .option("--model <name>", "model name (overrides provider default)")
+  .option("--api-key <key>", "API key (prefer env vars; avoid in shell history)")
   .action(async (opts: Record<string, unknown>) => {
     try {
       await runCommit({
@@ -55,6 +67,10 @@ program
         print: Boolean(opts.print),
         type: opts.type as string | undefined,
         maxDiffKb: opts.maxDiffKb as number,
+        provider: opts.provider as string | undefined,
+        baseUrl: opts.baseUrl as string | undefined,
+        model: opts.model as string | undefined,
+        apiKey: opts.apiKey as string | undefined,
       });
     } catch (err) {
       handleError(err);

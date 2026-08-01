@@ -95,7 +95,14 @@ export async function runCommit(options: CommitOptions): Promise<void> {
 
   let message: string;
   try {
-    const generated = cleanMessage(await chatCompletion(messages));
+    const generated = cleanMessage(
+      await chatCompletion(messages, {
+        provider: options.provider,
+        baseUrl: options.baseUrl,
+        model: options.model,
+        apiKey: options.apiKey,
+      }),
+    );
     if (!generated) {
       progressBar.stop();
       fail("AI 返回了空内容，请重试。");

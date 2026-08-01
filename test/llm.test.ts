@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { chatCompletion, LLMError } from "../src/lib/llm.js";
+import { PROVIDERS } from "../src/lib/providers.js";
 
-const ORIGINAL_KEY = process.env.DEEPSEEK_API_KEY;
+const PROVIDER_ENVS = PROVIDERS.map((p) => p.apiKeyEnv);
+const ALL_ENVS = [...PROVIDER_ENVS, "LLM_API_KEY", "LLM_BASE_URL", "LLM_MODEL"];
+const ORIGINAL: Record<string, string | undefined> = {};
+for (const env of ALL_ENVS) ORIGINAL[env] = process.env[env];
 
 function mockFetch(impl: (url: string, init: RequestInit) => Promise<Response>) {
   vi.stubGlobal("fetch", vi.fn(impl));
@@ -16,13 +20,15 @@ function jsonResponse(status: number, body: unknown): Response {
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  if (ORIGINAL_KEY === undefined) delete process.env.DEEPSEEK_API_KEY;
-  else process.env.DEEPSEEK_API_KEY = ORIGINAL_KEY;
+  for (const env of ALL_ENVS) {
+    if (ORIGINAL[env] === undefined) delete process.env[env];
+    else process.env[env] = ORIGINAL[env];
+  }
 });
 
 describe("chatCompletion", () => {
   it("无 API key 时报友好错误", async () => {
-    delete process.env.DEEPSEEK_API_KEY;
+    for (const env of ALL_ENVS) delete process.env[env];
     await expect(chatCompletion([{ role: "user", content: "hi" }])).rejects.toThrow(
       LLMError,
     );

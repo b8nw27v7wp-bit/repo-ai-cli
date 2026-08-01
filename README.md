@@ -34,11 +34,11 @@
 - 🛡️ **Robust Error Handling** — Automatic retries with exponential backoff for transient API errors, and graceful fallbacks to prevent corrupted output.
   **健壮的错误处理** — 对瞬时 API 错误进行指数退避重试，并提供优雅降级以防止输出损坏。
 
-- 🔑 **BYOK (Bring Your Own Key)** — Use your own DeepSeek API key. Zero server-side costs, and your code is only sent to the API you configure.
-  **BYOK 自带 API Key** — 使用你自己的 DeepSeek API Key。零服务端成本，代码仅发送至你配置的 API。
+- 🔑 **BYOK (Bring Your Own Key)** — Use your own API key from 8+ providers (DeepSeek, OpenAI, Kimi, GLM, Qwen, MiniMax, Grok, SiliconFlow) or any OpenAI-compatible endpoint. Zero server-side costs, and your code is only sent to the API you configure.
+  **BYOK 自带 API Key** — 支持 DeepSeek、OpenAI、Kimi、GLM、通义千问、MiniMax、Grok、硅基流动等 8+ 家国内外提供商，以及任意 OpenAI 兼容端点。零服务端成本，代码仅发送至你配置的 API。
 
-- 🧪 **Comprehensive Testing** — 55+ unit and end-to-end tests covering file filtering, token budgeting, git integration, LLM error handling, and more.
-  **全面测试覆盖** — 55+ 单元测试与端到端测试，覆盖文件过滤、Token 预算、Git 集成、LLM 错误处理等核心逻辑。
+- 🧪 **Comprehensive Testing** — 66+ unit and end-to-end tests covering file filtering, token budgeting, git integration, LLM error handling, provider resolution, and more.
+  **全面测试覆盖** — 66+ 单元测试与端到端测试，覆盖文件过滤、Token 预算、Git 集成、LLM 错误处理、提供商解析等核心逻辑。
 
 ---
 
@@ -71,15 +71,26 @@ npx repo-ai-cli --help
 ### Set up your API Key — 配置 API Key
 
 ```bash
-# macOS / Linux
-export DEEPSEEK_API_KEY=sk-xxx
+# Any of the 8+ built-in providers (choose one):
+export DEEPSEEK_API_KEY=sk-xxx          # DeepSeek
+export OPENAI_API_KEY=sk-xxx            # OpenAI
+export MOONSHOT_API_KEY=sk-xxx          # Kimi
+export ZHIPU_API_KEY=xxx                # 智谱 GLM
+export DASHSCOPE_API_KEY=sk-xxx         # 通义千问
+export MINIMAX_API_KEY=xxx              # MiniMax
+export XAI_API_KEY=xxx                  # Grok
+export SILICONFLOW_API_KEY=sk-xxx       # 硅基流动
 
-# Windows (cmd)
-set DEEPSEEK_API_KEY=sk-xxx
+# Or any custom OpenAI-compatible endpoint:
+export LLM_BASE_URL=https://your-endpoint/v1
+export LLM_API_KEY=sk-xxx
 
-# Windows (PowerShell)
-$env:DEEPSEEK_API_KEY="sk-xxx"
+# Or select a provider explicitly per command:
+repo-ai-cli readme --provider moonshot
+repo-ai-cli readme --provider siliconflow --model Qwen/Qwen2.5-7B-Instruct
 ```
+
+*Windows (cmd) 用 `set VAR=xxx`，PowerShell 用 `$env:VAR="xxx"`。*
 
 ### Generate a README — 生成 README
 
@@ -125,8 +136,19 @@ repo-ai-cli commit --type feat
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DEEPSEEK_API_KEY` | **Yes** | Your DeepSeek API key. Used for all LLM calls. |
-| `GITHUB_MIRROR` | No | A GitHub mirror URL prefix (e.g., `https://your-mirror.com/`). Used when direct GitHub access fails. Defaults to `https://gh-proxy.com/`. |
+| `DEEPSEEK_API_KEY` | One of | DeepSeek API key |
+| `OPENAI_API_KEY` | One of | OpenAI API key |
+| `MOONSHOT_API_KEY` | One of | Moonshot (Kimi) API key |
+| `ZHIPU_API_KEY` | One of | 智谱 GLM API key |
+| `DASHSCOPE_API_KEY` | One of | 通义千问 (DashScope) API key |
+| `MINIMAX_API_KEY` | One of | MiniMax API key |
+| `XAI_API_KEY` | One of | xAI (Grok) API key |
+| `SILICONFLOW_API_KEY` | One of | 硅基流动 API key |
+| `LLM_BASE_URL` + `LLM_API_KEY` | Custom | Any OpenAI-compatible endpoint |
+| `LLM_MODEL` | No | Default model override |
+| `GITHUB_MIRROR` | No | GitHub mirror prefix (default `https://gh-proxy.com/`), used when direct access fails |
+
+*未显式指定 provider 时，工具按上表顺序自动选择第一个已配置 key 的提供商。*
 
 ### Command Options — 命令参数
 
@@ -140,6 +162,10 @@ repo-ai-cli commit --type feat
 | `--dry-run` | Print statistics only, do not call the API | `false` |
 | `--max-tokens <n>` | Token budget for the LLM call | `48000` |
 | `--max-file-kb <n>` | Maximum single-file size to include (in KB) | `100` |
+| `--provider <id>` | LLM provider: `deepseek` \| `openai` \| `moonshot` \| `zhipu` \| `qwen` \| `minimax` \| `xai` \| `siliconflow` | auto-detect |
+| `--base-url <url>` | Custom OpenAI-compatible endpoint | provider default |
+| `--model <name>` | Model name override | provider default |
+| `--api-key <key>` | API key (prefer env vars) | env var |
 
 #### `repo-ai-cli commit`
 
@@ -150,6 +176,9 @@ repo-ai-cli commit --type feat
 | `--print` | Print the message without interaction | `false` |
 | `--type <type>` | Force a commit type (e.g., `feat`, `fix`, `docs`) | Auto-detect |
 | `--max-diff-kb <n>` | Maximum diff size to process (in KB) | `200` |
+| `--provider <id>` | LLM provider (same as `readme`) | auto-detect |
+| `--base-url <url>` | Custom OpenAI-compatible endpoint | provider default |
+| `--model <name>` | Model name override | provider default |
 
 ---
 

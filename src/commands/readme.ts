@@ -170,7 +170,12 @@ export async function runReadme(options: ReadmeOptions): Promise<void> {
     const messages = buildReadmePrompt(repoName, budget, language);
     let content: string;
     try {
-      content = await chatCompletion(messages);
+      content = await chatCompletion(messages, {
+        provider: options.provider,
+        baseUrl: options.baseUrl,
+        model: options.model,
+        apiKey: options.apiKey,
+      });
     } catch (err) {
       progressBar.stop("生成失败");
       fail((err as Error).message);
