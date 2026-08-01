@@ -7,7 +7,7 @@ import pkg from "../package.json" with { type: "json" };
 const program = new Command();
 
 program
-  .name("repo-ai")
+  .name("repo-ai-cli")
   .description("AI-powered repo helper: bilingual README + conventional commits")
   .version(pkg.version);
 
