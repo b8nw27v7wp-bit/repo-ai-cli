@@ -4,5 +4,3 @@ coverage/
 *.tsbuildinfo
 .DS_Store
 *.log
-.changeset/*.md
-!/.changeset/config.json
