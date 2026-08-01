@@ -131,6 +131,7 @@ export async function chatCompletion(
     }
   }
 
+  // 不可达：for 循环内所有退出路径都有 throw/continue，这里仅作类型收窄防御
   throw lastError ?? new LLMError("未知错误", "network");
 }
 

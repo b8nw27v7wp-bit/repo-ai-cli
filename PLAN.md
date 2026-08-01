@@ -235,15 +235,15 @@ jobs:
 - **验收**：✅ 对真实改动跑出规范 message，确认后可复制
 
 ### M4 — 测试 + CI + 发布上线
-- [x] 补齐 §6 测试矩阵（55 个测试），CI 全绿
+- [x] 补齐 §6 测试矩阵（66 个测试），CI 全绿
 - [x] changesets 配置，release.yml 打通
-- [ ] npm 发布 0.1.0 真实可用（包名已定为 **repo-ai-cli**，待推送 GitHub 后发布）
-- **验收**：⏳ `npm i -g repo-ai-cli` 后两个命令都能用（本地打包安装已验证）；GitHub Actions 徽章待推送后点亮
+- [x] npm 发布 0.1.0 真实可用（包名 repo-ai-cli）
+- **验收**：✅ `npm i -g repo-ai-cli` 后两个命令都能用（已验证）；GitHub Actions CI + Release 徽章全绿
 
 ### M5 — 文档自举 + 简历素材
 - [x] 用 repo-ai 生成自身 README（dogfooding，README 里直接展示效果）
-- [ ] README 加 GIF 演示（clack 交互录屏）— 占位已留
-- [x] 写简历条目：一句话价值 + 数据（测试数、下载量）
+- [ ] README 加 GIF 演示（clack 交互录屏）— 录屏待用户操作
+- [x] 写简历条目：一句话价值 + 数据（66 测试、8+ 提供商、npm 已发布）
 
 ---
 
@@ -262,8 +262,8 @@ jobs:
 
 ## 10. 简历条目（预写）
 
-> **repo-ai-cli** — TypeScript CLI 工具（npm 发布，GitHub Actions 自动 CI/CD）
-> 用 AI 自动生成中英双语 README 与规范 commit message；实现 token 预算控制、.gitignore 感知的文件收集、LLM 调用重试与降级、GitHub 远程仓库浅克隆（含国内镜像回退）；55+ 单测覆盖过滤/预算/错误处理核心逻辑；支持本地目录与 GitHub 远程仓库两种输入，BYOK 零服务端成本。
+> **repo-ai-cli** — TypeScript CLI 工具（npm 发布 0.1.0，GitHub Actions 自动 CI/CD）
+> 用 AI 自动生成中英双语 README 与规范 commit message；实现 token 预算控制、.gitignore 感知的文件收集、LLM 调用重试与降级、GitHub 远程仓库浅克隆（含国内镜像回退）；66 单测覆盖过滤/预算/错误处理/提供商解析核心逻辑；支持 8+ 家国内外 LLM 提供商（DeepSeek/OpenAI/Kimi/GLM/通义/MiniMax/Grok/硅基流动）及任意 OpenAI 兼容端点；BYOK 零服务端成本。
 
 ---
 

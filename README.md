@@ -44,9 +44,9 @@
 
 ## 🎬 Demo — 演示
 
-![repo-ai-cli demo](https://via.placeholder.com/800x400?text=Demo+GIF+coming+soon)
-
-*交互界面截图/GIF 待补充（clack spinner、确认流）*
+> 📝 本 README 由 repo-ai-cli 自己生成（dogfooding）——上面的示例就是它的真实输出效果。
+> 
+> 录屏 GIF 待补充（clack spinner + 交互确认流演示）。
 
 ---
 
