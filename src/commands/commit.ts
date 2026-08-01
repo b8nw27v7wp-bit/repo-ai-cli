@@ -98,6 +98,8 @@ export async function runCommit(options: CommitOptions): Promise<void> {
     baseUrl: options.baseUrl,
     model: options.model,
     apiKey: options.apiKey,
+    maxTokens: options.maxOutputTokens,
+    temperature: options.temperature,
   };
 
   let message: string;

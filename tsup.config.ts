@@ -8,8 +8,8 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   dts: true,
-  // deps 外置：commander/clack/picocolors 走 node_modules
+  // deps 外置：commander 走 node_modules
   // 但为了发布干净 + 开箱即用，把运行时依赖也打进单文件
-  noExternal: ["@clack/prompts", "picocolors"],
+  noExternal: ["@clack/prompts"],
   banner: { js: "#!/usr/bin/env node" },
 });

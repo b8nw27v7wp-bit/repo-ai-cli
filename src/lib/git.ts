@@ -81,8 +81,11 @@ export async function getDiff(
     return { diff: raw, totalBytes, truncated: false, files };
   }
 
-  // 截断：保留开头，标注超限
+  // 截断：在 hunk 边界处截断，避免切碎 diff 结构
   const truncated = `[diff truncated: ${(totalBytes / 1024).toFixed(0)} KB > ${(maxBytes / 1024).toFixed(0)} KB limit — 请分次提交或缩小改动]\n`;
-  const keep = Buffer.from(raw, "utf8").subarray(0, maxBytes).toString("utf8");
+  const rawKeep = Buffer.from(raw, "utf8").subarray(0, maxBytes).toString("utf8");
+  // 找最后一个 @@ hunk 头，在其之前截断（保留完整的 diff --git 头）
+  const lastHunkIdx = rawKeep.lastIndexOf("\n@@ ");
+  const keep = lastHunkIdx > 0 ? rawKeep.slice(0, lastHunkIdx + 1) : rawKeep;
   return { diff: truncated + keep, totalBytes, truncated: true, files };
 }

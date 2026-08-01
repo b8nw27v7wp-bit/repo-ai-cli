@@ -48,6 +48,10 @@ export interface ReadmeOptions {
   baseUrl?: string;
   model?: string;
   apiKey?: string;
+  /** 最大输出 token 数 */
+  maxOutputTokens?: number;
+  /** 采样温度 */
+  temperature?: number;
 }
 
 export interface CommitOptions {
@@ -60,6 +64,10 @@ export interface CommitOptions {
   baseUrl?: string;
   model?: string;
   apiKey?: string;
+  /** 最大输出 token 数 */
+  maxOutputTokens?: number;
+  /** 采样温度 */
+  temperature?: number;
 }
 
 export interface LLMConfig {
@@ -70,6 +78,10 @@ export interface LLMConfig {
   model?: string;
   timeoutMs?: number;
   maxRetries?: number;
+  /** 最大输出 token 数，默认 4096 */
+  maxTokens?: number;
+  /** 采样温度 0~2，默认 0.7 */
+  temperature?: number;
 }
 
 export interface ChatMessage {
