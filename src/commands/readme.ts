@@ -175,6 +175,8 @@ export async function runReadme(options: ReadmeOptions): Promise<void> {
         baseUrl: options.baseUrl,
         model: options.model,
         apiKey: options.apiKey,
+        maxTokens: options.maxOutputTokens,
+        temperature: options.temperature,
       });
     } catch (err) {
       progressBar.stop("生成失败");

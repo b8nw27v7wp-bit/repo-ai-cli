@@ -1,7 +1,6 @@
 import { Command } from "commander";
 import { runReadme } from "./commands/readme.js";
 import { runCommit } from "./commands/commit.js";
-import { LLMError } from "./lib/llm.js";
 import pkg from "../package.json" with { type: "json" };
 
 const program = new Command();
@@ -24,6 +23,8 @@ program
   .option("--dry-run", "print stats only, do not call API")
   .option("--max-tokens <n>", "token budget", (v) => parseInt(v, 10), 48000)
   .option("--max-file-kb <n>", "max single-file size in KB", (v) => parseInt(v, 10), 100)
+  .option("--max-output-tokens <n>", "max LLM output tokens", (v) => parseInt(v, 10), 8192)
+  .option("--temperature <n>", "sampling temperature 0~2", (v) => parseFloat(v), 0.7)
   .option("--provider <id>", "LLM provider: deepseek|openai|moonshot|zhipu|qwen|minimax|xai|siliconflow")
   .option("--base-url <url>", "custom OpenAI-compatible endpoint (overrides provider)")
   .option("--model <name>", "model name (overrides provider default)")
@@ -37,6 +38,8 @@ program
         dryRun: Boolean(opts.dryRun),
         maxTokens: opts.maxTokens as number,
         maxFileKb: opts.maxFileKb as number,
+        maxOutputTokens: opts.maxOutputTokens as number,
+        temperature: opts.temperature as number,
         provider: opts.provider as string | undefined,
         baseUrl: opts.baseUrl as string | undefined,
         model: opts.model as string | undefined,
@@ -55,6 +58,8 @@ program
   .option("--print", "print message without interaction")
   .option("--type <type>", "force commit type (feat/fix/docs/...)")
   .option("--max-diff-kb <n>", "max diff size in KB", (v) => parseInt(v, 10), 200)
+  .option("--max-output-tokens <n>", "max LLM output tokens", (v) => parseInt(v, 10), 1024)
+  .option("--temperature <n>", "sampling temperature 0~2", (v) => parseFloat(v), 0.3)
   .option("--provider <id>", "LLM provider: deepseek|openai|moonshot|zhipu|qwen|minimax|xai|siliconflow")
   .option("--base-url <url>", "custom OpenAI-compatible endpoint (overrides provider)")
   .option("--model <name>", "model name (overrides provider default)")
@@ -67,6 +72,8 @@ program
         print: Boolean(opts.print),
         type: opts.type as string | undefined,
         maxDiffKb: opts.maxDiffKb as number,
+        maxOutputTokens: opts.maxOutputTokens as number,
+        temperature: opts.temperature as number,
         provider: opts.provider as string | undefined,
         baseUrl: opts.baseUrl as string | undefined,
         model: opts.model as string | undefined,
@@ -78,13 +85,8 @@ program
   });
 
 function handleError(err: unknown): void {
-  if (err instanceof LLMError) {
-    console.error(`✖ ${err.message}`);
-  } else if (err instanceof Error) {
-    console.error(`✖ ${err.message}`);
-  } else {
-    console.error(`✖ ${String(err)}`);
-  }
+  const msg = err instanceof Error ? err.message : String(err);
+  console.error(`✖ ${msg}`);
   process.exitCode = 1;
 }
 

@@ -167,13 +167,14 @@ export function resolveLLMConfig(input: ResolveInput = {}): ResolvedLLMConfig {
   }
 
   // 3. 内置提供商：按注册表顺序选第一个有 key 的
+  // 注意：到这一步时 explicitBaseUrl 一定是 falsy（步骤 2 已 return），直接用默认值
   for (const p of PROVIDERS) {
     const apiKey = input.apiKey ?? process.env[p.apiKeyEnv];
     if (apiKey) {
       return {
         providerId: p.id,
         providerName: p.name,
-        baseUrl: explicitBaseUrl ?? p.defaultBaseUrl,
+        baseUrl: p.defaultBaseUrl,
         model: explicitModel ?? p.defaultModel,
         apiKey,
       };
