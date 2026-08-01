@@ -22,7 +22,7 @@ program
     "bilingual",
   )
   .option("--dry-run", "print stats only, do not call API")
-  .option("--max-tokens <n>", "token budget", (v) => parseInt(v, 10), 8000)
+  .option("--max-tokens <n>", "token budget", (v) => parseInt(v, 10), 48000)
   .option("--max-file-kb <n>", "max single-file size in KB", (v) => parseInt(v, 10), 100)
   .action(async (target: string, opts: Record<string, unknown>) => {
     try {
