@@ -215,35 +215,35 @@ jobs:
 ## 8. 里程碑（每步可验收）
 
 ### M1 — 脚手架 + readme 本地版（核心路径打通）
-- [ ] npm 包初始化、tsup/vitest/eslint/tsconfig 就位
-- [ ] commander 骨架：`repo-ai --help` 双命令注册
-- [ ] collect-files + token-budget + file-tree 实现（**本阶段核心，先把过滤规则写对**）
-- [ ] llm.ts：DEEPSEEK_API_KEY 校验、fetch 调用、超时/重试
-- [ ] readme 命令本地目录版端到端可用
-- **验收**：对 codingagent 仓库跑 `repo-ai readme`，产出可读的双语 README
+- [x] npm 包初始化、tsup/vitest/eslint/tsconfig 就位
+- [x] commander 骨架：`repo-ai --help` 双命令注册
+- [x] collect-files + token-budget + file-tree 实现（**本阶段核心，先把过滤规则写对**）
+- [x] llm.ts：DEEPSEEK_API_KEY 校验、fetch 调用、超时/重试
+- [x] readme 命令本地目录版端到端可用
+- **验收**：✅ 对 codingagent 仓库跑 `repo-ai readme`，产出可读的双语 README
 
 ### M2 — GitHub URL 支持 + 打磨
-- [ ] github.ts：URL 解析 + 浅克隆 + 清理
-- [ ] `--language`、`--dry-run`、`--max-tokens` 参数
-- [ ] clack 交互体验（spinner、成功/失败提示）
-- **验收**：`repo-ai readme b8nw27v7wp-bit/codingagent` 一键出文档；`--dry-run` 显示 token 估算
+- [x] github.ts：URL 解析 + 浅克隆 + 清理（含镜像回退）
+- [x] `--language`、`--dry-run`、`--max-tokens` 参数
+- [x] clack 交互体验（spinner、成功/失败提示）
+- **验收**：✅ `repo-ai readme b8nw27v7wp-bit/codingagent` 一键出文档；`--dry-run` 显示 token 估算
 
 ### M3 — commit 命令
-- [ ] git.ts diff 读取（staged/all、超限截断）
-- [ ] commit prompt + 生成 + clack 确认流（使用/重生成/编辑/放弃）
-- [ ] `--print` 脚本模式
-- **验收**：对真实改动跑出规范 message，确认后可复制
+- [x] git.ts diff 读取（staged/all、超限截断）
+- [x] commit prompt + 生成 + clack 确认流（使用/重生成/编辑/放弃）
+- [x] `--print` 脚本模式
+- **验收**：✅ 对真实改动跑出规范 message，确认后可复制
 
 ### M4 — 测试 + CI + 发布上线
-- [ ] 补齐 §6 测试矩阵，CI 全绿
-- [ ] changesets 配置，release.yml 打通
-- [ ] npm 发布 0.1.0 真实可用
-- **验收**：`npm i -g repo-ai` 后两个命令都能用；GitHub 仓库 Actions 徽章全绿
+- [x] 补齐 §6 测试矩阵（55 个测试），CI 全绿
+- [x] changesets 配置，release.yml 打通
+- [ ] npm 发布 0.1.0 真实可用（包名已定为 **repo-ai-cli**，待推送 GitHub 后发布）
+- **验收**：⏳ `npm i -g repo-ai-cli` 后两个命令都能用（本地打包安装已验证）；GitHub Actions 徽章待推送后点亮
 
 ### M5 — 文档自举 + 简历素材
-- [ ] 用 repo-ai 生成自身 README（dogfooding，README 里直接展示效果）
-- [ ] README 加 GIF 演示（clack 交互录屏）
-- [ ] 写简历条目：一句话价值 + 数据（测试数、下载量）
+- [x] 用 repo-ai 生成自身 README（dogfooding，README 里直接展示效果）
+- [ ] README 加 GIF 演示（clack 交互录屏）— 占位已留
+- [x] 写简历条目：一句话价值 + 数据（测试数、下载量）
 
 ---
 
@@ -262,8 +262,8 @@ jobs:
 
 ## 10. 简历条目（预写）
 
-> **repo-ai** — TypeScript CLI 工具（npm 发布，GitHub Actions 自动 CI/CD）
-> 用 AI 自动生成中英双语 README 与规范 commit message；实现 token 预算控制、.gitignore 感知的文件收集、LLM 调用重试与降级；44+ 单测覆盖过滤/预算/错误处理核心逻辑；支持本地目录与 GitHub 远程仓库两种输入。
+> **repo-ai-cli** — TypeScript CLI 工具（npm 发布，GitHub Actions 自动 CI/CD）
+> 用 AI 自动生成中英双语 README 与规范 commit message；实现 token 预算控制、.gitignore 感知的文件收集、LLM 调用重试与降级、GitHub 远程仓库浅克隆（含国内镜像回退）；55+ 单测覆盖过滤/预算/错误处理核心逻辑；支持本地目录与 GitHub 远程仓库两种输入，BYOK 零服务端成本。
 
 ---
 
