@@ -93,15 +93,17 @@ export async function runCommit(options: CommitOptions): Promise<void> {
     files: diffResult.files,
   });
 
+  const llmConfig = {
+    provider: options.provider,
+    baseUrl: options.baseUrl,
+    model: options.model,
+    apiKey: options.apiKey,
+  };
+
   let message: string;
   try {
     const generated = cleanMessage(
-      await chatCompletion(messages, {
-        provider: options.provider,
-        baseUrl: options.baseUrl,
-        model: options.model,
-        apiKey: options.apiKey,
-      }),
+      await chatCompletion(messages, llmConfig),
     );
     if (!generated) {
       progressBar.stop();
@@ -151,7 +153,7 @@ export async function runCommit(options: CommitOptions): Promise<void> {
       const s = spinner();
       s.start("重新生成...");
       try {
-        message = cleanMessage(await chatCompletion(messages));
+        message = cleanMessage(await chatCompletion(messages, llmConfig));
       } catch (err) {
         s.stop("生成失败");
         fail((err as Error).message);
