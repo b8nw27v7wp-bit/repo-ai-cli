@@ -45,6 +45,14 @@ export interface ReadmeOptions {
   maxFileKb: number;
 }
 
+export interface CommitOptions {
+  staged?: boolean;
+  all?: boolean;
+  print?: boolean;
+  type?: string;
+  maxDiffKb?: number;
+}
+
 export interface LLMConfig {
   apiKey?: string;
   baseUrl?: string;
