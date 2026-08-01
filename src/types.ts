@@ -43,6 +43,11 @@ export interface ReadmeOptions {
   dryRun?: boolean;
   maxTokens: number;
   maxFileKb: number;
+  /** LLM 提供商 id（deepseek 等），见 providers.ts */
+  provider?: string;
+  baseUrl?: string;
+  model?: string;
+  apiKey?: string;
 }
 
 export interface CommitOptions {
@@ -51,9 +56,15 @@ export interface CommitOptions {
   print?: boolean;
   type?: string;
   maxDiffKb?: number;
+  provider?: string;
+  baseUrl?: string;
+  model?: string;
+  apiKey?: string;
 }
 
 export interface LLMConfig {
+  /** 提供商 id（deepseek/openai/moonshot/zhipu/qwen/minimax/xai/siliconflow） */
+  provider?: string;
   apiKey?: string;
   baseUrl?: string;
   model?: string;

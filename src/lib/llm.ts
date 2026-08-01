@@ -1,7 +1,5 @@
 import type { ChatMessage, LLMConfig } from "../types.js";
-
-export const DEEPSEEK_DEFAULT_BASE_URL = "https://api.deepseek.com";
-export const DEEPSEEK_DEFAULT_MODEL = "deepseek-chat";
+import { resolveLLMConfig, type ResolveInput } from "./providers.js";
 
 export class LLMError extends Error {
   constructor(
@@ -25,28 +23,32 @@ const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * 调用 DeepSeek Chat Completions API。
- * - 无 API key → 抛 no-api-key
- * - 429/5xx/超时/空响应 → 重试（指数退避），耗尽后抛错
- * - 4xx 其他 → 直接抛 http-error（如 401 key 无效）
+ * 调用任意 OpenAI 兼容 chat/completions API（DeepSeek / OpenAI / Kimi / GLM / 通义 / MiniMax / xAI / 硅基流动 / 自定义端点）。
+ *
+ * 配置解析顺序（见 providers.ts resolveLLMConfig）：
+ * 1. CLI 显式参数（--provider / --base-url / --model）
+ * 2. 自定义端点环境变量（LLM_BASE_URL + LLM_API_KEY）
+ * 3. 提供商专用 key（DEEPSEEK_API_KEY、OPENAI_API_KEY ...）
+ *
+ * 错误处理：
+ * - 无 key → 抛 no-api-key（带完整指引）
+ * - 429/5xx/超时/空响应 → 指数退避重试
+ * - 401/403 等其他 4xx → 直接抛 http-error
  */
 export async function chatCompletion(
   messages: ChatMessage[],
   config: LLMConfig = {},
 ): Promise<string> {
-  const apiKey = config.apiKey ?? process.env.DEEPSEEK_API_KEY;
-  if (!apiKey) {
-    throw new LLMError(
-      "未检测到 DEEPSEEK_API_KEY。请设置环境变量，例如：\n" +
-        "  export DEEPSEEK_API_KEY=sk-xxx   # macOS/Linux\n" +
-        "  set DEEPSEEK_API_KEY=sk-xxx      # Windows (cmd)\n" +
-        "  $env:DEEPSEEK_API_KEY=\"sk-xxx\"   # Windows (PowerShell)",
-      "no-api-key",
-    );
+  let resolved;
+  try {
+    resolved = resolveLLMConfig(config as ResolveInput);
+  } catch (err) {
+    throw new LLMError((err as Error).message, "no-api-key");
   }
 
-  const baseUrl = (config.baseUrl ?? DEEPSEEK_DEFAULT_BASE_URL).replace(/\/$/, "");
-  const model = config.model ?? DEEPSEEK_DEFAULT_MODEL;
+  const baseUrl = resolved.baseUrl.replace(/\/$/, "");
+  const model = resolved.model;
+  const apiKey = resolved.apiKey;
   const timeoutMs = config.timeoutMs ?? 120_000;
   const maxRetries = config.maxRetries ?? 2;
 
@@ -94,13 +96,13 @@ export async function chatCompletion(
 
       if (res.status === 401 || res.status === 403) {
         throw new LLMError(
-          `API key 无效或被拒绝（HTTP ${res.status}）。请检查 DEEPSEEK_API_KEY。`,
+          `API key 无效或被拒绝（HTTP ${res.status}）。请检查 ${resolved.providerName} 的 key。`,
           "http-error",
         );
       }
       if (RETRYABLE_STATUS.has(res.status)) {
         lastError = new LLMError(
-          `服务端错误 HTTP ${res.status}`,
+          `服务端错误 HTTP ${res.status}（${resolved.providerName}）`,
           res.status === 429 ? "rate-limit" : "server-error",
         );
         continue;
@@ -124,7 +126,6 @@ export async function chatCompletion(
       }
       return content;
     } catch (err) {
-      // 非重试性错误（401/403/其他 4xx）直接抛出
       if (err instanceof LLMError && err.kind !== "http-error") throw err;
       throw err;
     }
