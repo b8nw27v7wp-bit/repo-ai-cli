@@ -2,12 +2,20 @@ import { intro, outro, spinner, confirm, select, log, text } from "@clack/prompt
 import { getDiff, assertInGitRepo } from "../lib/git.js";
 import { chatCompletion } from "../lib/llm.js";
 import { buildCommitPrompt } from "../prompts/commit.js";
+import { loadConfig } from "../lib/config.js";
 import type { CommitOptions } from "../types.js";
 
 const interactive = Boolean(process.stdout.isTTY);
 
+/** JSON 输出模式（模块级标志） */
+let jsonMode = false;
+
+function emitJson(obj: Record<string, unknown>): void {
+  console.log(JSON.stringify(obj));
+}
+
 function progress(label: string) {
-  if (interactive) {
+  if (interactive && !jsonMode) {
     const s = spinner();
     s.start(label);
     return {
@@ -16,20 +24,27 @@ function progress(label: string) {
       },
     };
   }
-  console.log(`... ${label}`);
+  if (!jsonMode) console.log(`... ${label}`);
   return {
     stop(msg?: string) {
-      console.log(msg ? `... ${msg}` : `... ${label}`);
+      // 无参 stop 不重复打印
+      if (msg && !jsonMode) console.log(`... ${msg}`);
     },
   };
 }
 
 function done(msg: string): void {
+  if (jsonMode) return;
   if (interactive) outro(`✓ ${msg}`);
   else console.log(`✓ ${msg}`);
 }
 
 function fail(msg: string): void {
+  if (jsonMode) {
+    emitJson({ ok: false, error: msg });
+    process.exitCode = 1;
+    return;
+  }
   if (interactive) outro(`✖ ${msg}`);
   else console.error(`✖ ${msg}`);
   process.exitCode = 1;
@@ -47,7 +62,9 @@ function cleanMessage(raw: string): string {
 }
 
 export async function runCommit(options: CommitOptions): Promise<void> {
-  if (interactive) intro("repo-ai commit");
+  jsonMode = options.json === true;
+  const cfg = await loadConfig();
+  if (interactive && !jsonMode) intro("repo-ai commit");
 
   const cwd = process.cwd();
   try {
@@ -100,6 +117,7 @@ export async function runCommit(options: CommitOptions): Promise<void> {
     apiKey: options.apiKey,
     maxTokens: options.maxOutputTokens,
     temperature: options.temperature,
+    config: cfg,
   };
 
   let message: string;
@@ -120,9 +138,10 @@ export async function runCommit(options: CommitOptions): Promise<void> {
   }
   progressBar.stop();
 
-  // 3. --print：直接输出，不交互
-  if (options.print) {
-    console.log(message);
+  // 3. --print 或 --json：直接输出，不交互
+  if (options.print || jsonMode) {
+    if (jsonMode) emitJson({ ok: true, message });
+    else console.log(message);
     return;
   }
 

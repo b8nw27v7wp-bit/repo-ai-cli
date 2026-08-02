@@ -107,35 +107,45 @@ export interface ResolveInput {
   model?: string;
   /** --api-key 显式指定（不推荐，会出现在 shell 历史） */
   apiKey?: string;
+  /** 来自 ~/.repo-ai/config.json 的持久化配置（优先级低于 env，高于默认值） */
+  config?: {
+    provider?: string;
+    baseUrl?: string;
+    model?: string;
+    apiKey?: string;
+  };
 }
 
 /**
  * 解析最终生效的 LLM 配置。优先级：
  * 1. CLI 显式参数（--provider / --base-url / --model / --api-key）
  * 2. 自定义端点环境变量（LLM_BASE_URL / LLM_API_KEY / LLM_MODEL）
- * 3. 内置提供商专用 key（DEEPSEEK_API_KEY 等）——按注册表顺序选第一个存在的
+ * 3. 配置文件（~/.repo-ai/config.json，repo-ai config set 写入）
+ * 4. 内置提供商专用 key（DEEPSEEK_API_KEY 等）——按注册表顺序选第一个存在的
  * 全都没有 → 抛错并列出所有选项。
  */
 export function resolveLLMConfig(input: ResolveInput = {}): ResolvedLLMConfig {
+  const cfg = input.config ?? {};
   // --base-url / --model 显式给出但没指定 provider → 视为自定义
-  const explicitBaseUrl = input.baseUrl ?? process.env.LLM_BASE_URL;
-  const explicitModel =
-    input.model ?? process.env.LLM_MODEL;
-  const explicitApiKey = input.apiKey ?? process.env.LLM_API_KEY;
+  const explicitBaseUrl = input.baseUrl ?? process.env.LLM_BASE_URL ?? cfg.baseUrl;
+  const explicitModel = input.model ?? process.env.LLM_MODEL ?? cfg.model;
+  const explicitApiKey = input.apiKey ?? process.env.LLM_API_KEY ?? cfg.apiKey;
 
-  // 1. 显式 provider
-  if (input.provider) {
-    const p = findProvider(input.provider);
+  // 1. 显式 provider（CLI 优先，其次配置文件）
+  const providerId = input.provider ?? cfg.provider;
+  if (providerId) {
+    const p = findProvider(providerId);
     if (!p) {
       throw new Error(
-        `未知 provider: ${input.provider}。支持: ${PROVIDERS.map((x) => x.id).join(", ")}（或设置 LLM_BASE_URL 使用自定义端点）`,
+        `未知 provider: ${providerId}。支持: ${PROVIDERS.map((x) => x.id).join(", ")}（或设置 LLM_BASE_URL 使用自定义端点）`,
       );
     }
-    const apiKey = input.apiKey ?? process.env[p.apiKeyEnv];
+    const apiKey = input.apiKey ?? process.env[p.apiKeyEnv] ?? cfg.apiKey;
     if (!apiKey) {
       throw new Error(
         `provider "${p.id}"（${p.name}）需要设置环境变量 ${p.apiKeyEnv}。\n` +
-          `获取 key: ${p.docsUrl ?? "见官方文档"}`,
+          `获取 key: ${p.docsUrl ?? "见官方文档"}\n` +
+          `或用: repo-ai-cli config set apiKey <key> 持久化到 ~/.repo-ai/config.json`,
       );
     }
     return {
@@ -154,7 +164,8 @@ export function resolveLLMConfig(input: ResolveInput = {}): ResolvedLLMConfig {
       throw new Error(
         "已检测到 LLM_BASE_URL（自定义端点），但未设置 LLM_API_KEY。请同时设置：\n" +
           "  export LLM_BASE_URL=https://your-endpoint/v1\n" +
-          "  export LLM_API_KEY=sk-xxx",
+          "  export LLM_API_KEY=sk-xxx\n" +
+          "或用: repo-ai-cli config set apiKey <key> 持久化到 ~/.repo-ai/config.json",
       );
     }
     return {
@@ -166,10 +177,10 @@ export function resolveLLMConfig(input: ResolveInput = {}): ResolvedLLMConfig {
     };
   }
 
-  // 3. 内置提供商：按注册表顺序选第一个有 key 的
+  // 4. 内置提供商：按注册表顺序选第一个有 key 的
   // 注意：到这一步时 explicitBaseUrl 一定是 falsy（步骤 2 已 return），直接用默认值
   for (const p of PROVIDERS) {
-    const apiKey = input.apiKey ?? process.env[p.apiKeyEnv];
+    const apiKey = input.apiKey ?? process.env[p.apiKeyEnv] ?? cfg.apiKey;
     if (apiKey) {
       return {
         providerId: p.id,
@@ -181,7 +192,7 @@ export function resolveLLMConfig(input: ResolveInput = {}): ResolvedLLMConfig {
     }
   }
 
-  // 4. 什么都没有
+  // 5. 什么都没有
   const envList = PROVIDERS.map(
     (p) => `  ${p.apiKeyEnv}  →  ${p.name}`,
   ).join("\n");
@@ -193,6 +204,9 @@ export function resolveLLMConfig(input: ResolveInput = {}): ResolvedLLMConfig {
       "b) 或使用自定义 OpenAI 兼容端点：\n" +
       "  export LLM_BASE_URL=https://your-endpoint/v1\n" +
       "  export LLM_API_KEY=sk-xxx\n" +
-      "c) 或用 --provider 指定：repo-ai-cli readme --provider deepseek",
+      "c) 或持久化配置（推荐，一次设置长期生效）：\n" +
+      "  repo-ai-cli config set provider deepseek\n" +
+      "  repo-ai-cli config set apiKey sk-xxx\n" +
+      "d) 或临时指定：repo-ai-cli readme --provider deepseek --api-key sk-xxx",
   );
 }

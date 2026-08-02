@@ -52,6 +52,8 @@ export interface ReadmeOptions {
   maxOutputTokens?: number;
   /** 采样温度 */
   temperature?: number;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
 }
 
 export interface CommitOptions {
@@ -68,6 +70,31 @@ export interface CommitOptions {
   maxOutputTokens?: number;
   /** 采样温度 */
   temperature?: number;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface ChangelogOptions {
+  /** git 区间（v1.0.0.. / ..HEAD / 1.0.0..2.0.0）；默认最近一个 tag 之后 */
+  range?: string;
+  /** 最大 commit 数（默认 50） */
+  max?: number;
+  /** 输出文件（默认 CHANGELOG.md） */
+  output?: string;
+  /** 语言：zh | en（默认 zh） */
+  language: "zh" | "en";
+  /** dry-run：只打印统计 */
+  dryRun?: boolean;
+  /** 只打印不写文件 */
+  print?: boolean;
+  provider?: string;
+  baseUrl?: string;
+  model?: string;
+  apiKey?: string;
+  maxOutputTokens?: number;
+  temperature?: number;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
 }
 
 export interface LLMConfig {
@@ -82,6 +109,13 @@ export interface LLMConfig {
   maxTokens?: number;
   /** 采样温度 0~2，默认 0.7 */
   temperature?: number;
+  /** 持久化配置（~/.repo-ai/config.json，优先级低于 env） */
+  config?: {
+    provider?: string;
+    baseUrl?: string;
+    model?: string;
+    apiKey?: string;
+  };
 }
 
 export interface ChatMessage {

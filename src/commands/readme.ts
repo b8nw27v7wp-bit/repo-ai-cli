@@ -8,22 +8,37 @@ import { chatCompletion } from "../lib/llm.js";
 import { buildReadmePrompt, type ReadmeLanguage } from "../prompts/readme.js";
 import { writeOutput } from "../lib/output.js";
 import { parseGithubRef, cloneRepo } from "../lib/github.js";
+import { loadConfig } from "../lib/config.js";
 import type { ReadmeOptions } from "../types.js";
 
 /** 非 TTY（管道/CI）时 clack 的 spinner 会疯狂重绘，降级为普通日志 */
 const interactive = Boolean(process.stdout.isTTY);
 
+/** JSON 输出模式（模块级标志，由 runReadme 设置） */
+let jsonMode = false;
+
+function emitJson(obj: Record<string, unknown>): void {
+  console.log(JSON.stringify(obj));
+}
+
 function say(msg: string): void {
+  if (jsonMode) return;
   if (interactive) log.info(msg);
   else console.log(msg);
 }
 
 function done(msg: string): void {
+  if (jsonMode) return;
   if (interactive) outro(`✓ ${msg}`);
   else console.log(`✓ ${msg}`);
 }
 
 function fail(msg: string): void {
+  if (jsonMode) {
+    emitJson({ ok: false, error: msg });
+    process.exitCode = 1;
+    return;
+  }
   if (interactive) outro(`✖ ${msg}`);
   else console.error(`✖ ${msg}`);
   process.exitCode = 1;
@@ -64,7 +79,8 @@ function progress(label: string) {
       console.log(`... ${next}`);
     },
     stop(msg?: string) {
-      console.log(msg ? `... ${msg}` : `... ${current}`);
+      // 无参 stop 不重复打印（update 已打过最新状态）
+      if (msg) console.log(`... ${msg}`);
     },
   };
 }
@@ -75,6 +91,10 @@ function progress(label: string) {
  */
 export async function runReadme(options: ReadmeOptions): Promise<void> {
   if (interactive) intro("repo-ai readme");
+
+  const json = options.json === true;
+  jsonMode = json;
+  const cfg = await loadConfig();
 
   const target = options.target || ".";
   const progressBar = progress("准备中...");
@@ -151,6 +171,21 @@ export async function runReadme(options: ReadmeOptions): Promise<void> {
       const included = budget.files.filter((f) => f.mode !== "skip");
       const full = included.filter((f) => f.mode === "full").length;
       const sampled = included.length - full;
+      if (jsonMode) {
+        emitJson({
+          ok: true,
+          dryRun: true,
+          repo: repoName,
+          filesCollected: files.length,
+          filesIncluded: included.length,
+          filesFull: full,
+          filesSampled: sampled,
+          treeTokens: estimateTokens(treeText),
+          estimatedTokens: budget.estimatedTokens,
+          budget: options.maxTokens,
+        });
+        return;
+      }
       progressBar.stop();
       say(`repo: ${repoName}`);
       say(`files collected: ${files.length}`);
@@ -177,6 +212,7 @@ export async function runReadme(options: ReadmeOptions): Promise<void> {
         apiKey: options.apiKey,
         maxTokens: options.maxOutputTokens,
         temperature: options.temperature,
+        config: cfg,
       });
     } catch (err) {
       progressBar.stop("生成失败");
@@ -193,6 +229,10 @@ export async function runReadme(options: ReadmeOptions): Promise<void> {
     // 5. 写文件
     const outputPath = options.output ?? "README.md";
     const abs = await writeOutput(content, outputPath);
+    if (jsonMode) {
+      emitJson({ ok: true, output: abs, bytes: Buffer.byteLength(content) });
+      return;
+    }
     done(`README 已写入: ${abs}`);
   } finally {
     if (cleanup) {

@@ -245,6 +245,16 @@ jobs:
 - [ ] README 加 GIF 演示（clack 交互录屏）— 录屏待用户操作
 - [x] 写简历条目：一句话价值 + 数据（66 测试、8+ 提供商、npm 已发布）
 
+### M6 — v0.3.0 拓展：config 持久化 + changelog 命令 + JSON 输出
+- [x] `repo-ai config` 子命令组（init/set/get/list/unset/reset），配置持久化到 `~/.repo-ai/config.json`
+- [x] 配置优先级：CLI 参数 > 环境变量 > config 文件 > 默认值（providers.ts 支持 `config` 输入）
+- [x] `repo-ai changelog` 命令：git log 区间 → AI 生成 Keep-a-Changelog 风格 CHANGELOG.md
+- [x] `git.ts getLog()`：commit 列表读取（range 区间 + 正文批量获取）
+- [x] 全命令 `--json` 输出模式（readme/commit/changelog/config），脚本友好
+- [x] 修复非 TTY 下 progress 重复打印（update + stop 各打一次）
+- [x] 测试 66 → 88（config 读写/打码、provider 优先级、changelog prompt、getLog）
+- **验收**：✅ 三条命令真实 LLM 生成均通过（NVIDIA 免费端点冒烟）；config set/list/unset/reset 全流程可用
+
 ---
 
 ## 9. 风险与对策
