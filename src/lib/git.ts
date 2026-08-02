@@ -50,6 +50,93 @@ export async function assertInGitRepo(cwd: string): Promise<void> {
   }
 }
 
+export interface CommitEntry {
+  hash: string;
+  shortHash: string;
+  author: string;
+  date: string;
+  subject: string;
+  /** 该 commit 的原始 message 全文（含正文，供 AI 参考） */
+  body: string;
+}
+
+export interface LogOptions {
+  /** 起始区间：from..to（可省略一侧，如 "v1.0.0.." 或 "..HEAD"） */
+  range?: string;
+  /** 最大条数（默认 100） */
+  max?: number;
+  /** 是否包含正文（默认 true） */
+  includeBody?: boolean;
+}
+
+/** 解析 "a..b" 或 "a" 形式的区间为 git 参数 */
+function rangeArgs(range: string | undefined, max: number): string[] {
+  const base = ["log", `-n ${max}`, "--pretty=format:%H%x09%h%x09%an%x09%ad%x09%s", "--date=short"];
+  if (!range) return base;
+  if (range.includes("..")) return [...base, range];
+  // 单个 ref：从该 ref 之后（exclusive），常见于 "上一个 tag 之后"
+  return [...base, `${range}..HEAD`];
+}
+
+/**
+ * 读取 git log（默认最近 100 条）。
+ * range 示例: "v1.0.0.."（v1.0.0 之后）、"1.0.0..2.0.0"、"..HEAD"。
+ */
+export async function getLog(
+  cwd: string,
+  options: LogOptions = {},
+): Promise<CommitEntry[]> {
+  await assertInGitRepo(cwd);
+  const { range, max = 100, includeBody = true } = options;
+  const args = rangeArgs(range, max);
+  const raw = await runGit(args, cwd);
+  if (!raw.trim()) return [];
+
+  const entries: CommitEntry[] = [];
+  for (const line of raw.split("\n")) {
+    const [hash, shortHash, author, date, ...rest] = line.split("\t");
+    if (!hash || !shortHash || !author || !date) continue;
+    entries.push({
+      hash,
+      shortHash,
+      author,
+      date,
+      subject: rest.join("\t"),
+      body: "",
+    });
+  }
+
+  // 批量取正文（一次调用拿全量 body，避免 N 次 git 调用）
+  if (includeBody) {
+    const bodyArgs = [
+      "log",
+      ...(range ? (range.includes("..") ? [range] : [`${range}..HEAD`]) : []),
+      "-n 100",
+      "--pretty=format:%H%x09%B",
+    ];
+    try {
+      const rawBody = await runGit(bodyArgs, cwd);
+      const bodies = new Map<string, string>();
+      let curHash = "";
+      for (const line of rawBody.split("\n")) {
+        const tab = line.indexOf("\t");
+        if (tab > 0 && /^[0-9a-f]{40}$/.test(line.slice(0, tab))) {
+          curHash = line.slice(0, tab);
+          bodies.set(curHash, line.slice(tab + 1).trim());
+        } else if (curHash) {
+          bodies.set(curHash, (bodies.get(curHash) ?? "") + "\n" + line);
+        }
+      }
+      for (const e of entries) {
+        e.body = (bodies.get(e.hash) ?? "").trim();
+      }
+    } catch {
+      /* 正文获取失败不阻塞主流程 */
+    }
+  }
+  return entries;
+}
+
 /**
  * 读取 diff。
  * - staged（默认）: git diff --cached

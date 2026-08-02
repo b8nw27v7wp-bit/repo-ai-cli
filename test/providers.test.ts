@@ -117,3 +117,51 @@ describe("resolveLLMConfig", () => {
     expect(r.providerId).toBe("deepseek");
   });
 });
+
+describe("resolveLLMConfig 优先级: CLI > env > config", () => {
+  it("config.provider + config.apiKey 生效（无 env 时）", () => {
+    clearAll();
+    const r = resolveLLMConfig({
+      config: { provider: "qwen", apiKey: "sk-cfg-qwen" },
+    });
+    expect(r.providerId).toBe("qwen");
+    expect(r.apiKey).toBe("sk-cfg-qwen");
+    expect(r.baseUrl).toContain("dashscope");
+  });
+
+  it("env 优先于 config", () => {
+    clearAll();
+    process.env.OPENAI_API_KEY = "sk-env-openai";
+    const r = resolveLLMConfig({
+      config: { provider: "qwen", apiKey: "sk-cfg-qwen" },
+    });
+    // 显式 config.provider=qwen 优先于 env 自动检测
+    expect(r.providerId).toBe("qwen");
+    expect(r.apiKey).toBe("sk-cfg-qwen");
+  });
+
+  it("CLI 参数优先于 config", () => {
+    clearAll();
+    const r = resolveLLMConfig({
+      provider: "openai",
+      model: "gpt-4o",
+      config: { provider: "qwen", model: "qwen-max", apiKey: "sk-cfg" },
+    });
+    expect(r.providerId).toBe("openai");
+    expect(r.model).toBe("gpt-4o");
+  });
+
+  it("config.apiKey 单独存在时作为兜底（默认 deepseek）", () => {
+    clearAll();
+    const r = resolveLLMConfig({ config: { apiKey: "sk-cfg-only" } });
+    expect(r.apiKey).toBe("sk-cfg-only");
+    expect(r.providerId).toBe("deepseek");
+  });
+
+  it("config.provider 指定但无任何 key 时抛错", () => {
+    clearAll();
+    expect(() =>
+      resolveLLMConfig({ config: { provider: "moonshot" } }),
+    ).toThrow(/MOONSHOT_API_KEY/);
+  });
+});

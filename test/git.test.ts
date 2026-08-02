@@ -3,7 +3,7 @@ import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { getDiff, assertInGitRepo, GitError } from "../src/lib/git.js";
+import { getDiff, getLog, assertInGitRepo, GitError } from "../src/lib/git.js";
 
 let repo: string;
 
@@ -81,5 +81,30 @@ describe("getDiff", () => {
     const res = await getDiff(repo, { staged: true, maxBytes: 1024 });
     expect(res.truncated).toBe(true);
     expect(res.diff).toContain("[diff truncated");
+  });
+});
+
+describe("getLog", () => {
+  it("返回按时间倒序的 commit 列表", async () => {
+    const log = await getLog(repo, { max: 50 });
+    expect(log.length).toBeGreaterThanOrEqual(2);
+    expect(log[0]?.subject).toBeTruthy();
+    expect(log[0]?.shortHash).toMatch(/^[0-9a-f]{7}$/);
+    expect(log[0]?.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(log[0]?.author).toBeTruthy();
+  });
+
+  it("range 区间过滤生效", async () => {
+    const all = await getLog(repo, { max: 50 });
+    const oldest = all[all.length - 1];
+    expect(oldest).toBeDefined();
+    const afterOldest = await getLog(repo, { range: `${oldest!.shortHash}..` });
+    expect(afterOldest.length).toBe(all.length - 1);
+    expect(afterOldest.some((c) => c.hash === oldest!.hash)).toBe(false);
+  });
+
+  it("subject 来自 commit message 首行", async () => {
+    const log = await getLog(repo, { max: 50 });
+    expect(log[log.length - 1]?.subject).toContain("init");
   });
 });

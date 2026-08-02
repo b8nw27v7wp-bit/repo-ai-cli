@@ -22,14 +22,20 @@
 - 🔖 **Conventional Commit Messages** — Automatically generate clear, conventional commit messages from your git diff, following best practices.
   **规范 commit message** — 根据你的 git diff 自动生成清晰、符合 Conventional Commits 规范的提交信息。
 
+- 📜 **AI-Generated CHANGELOG** — Turn your git history into a Keep-a-Changelog-style CHANGELOG.md, automatically scoped since the last release tag.
+  **AI 生成 CHANGELOG** — 将你的 git 提交历史整理为 Keep a Changelog 风格的 CHANGELOG.md，自动以最近一个发布 tag 为区间起点。
+
+- ⚙️ **Persistent Config** — Save your provider, API key and defaults once with `repo-ai-cli config set`, no more env vars every time.
+  **配置持久化** — 用 `repo-ai-cli config set` 一次保存提供商、API key 与默认参数，无需每次设置环境变量。
+
 - 🧠 **Smart Token Budgeting** — Three-tier file prioritization and sampling ensure efficient use of your LLM token budget, even for large repositories.
   **智能 Token 预算管理** — 三层文件优先级与采样机制，即使面对大型仓库也能高效利用 LLM Token 预算。
 
 - 🚀 **GitHub Repository Support** — Pass a GitHub URL or `owner/repo` shorthand; the tool shallow-clones the repo to a temp directory and cleans up automatically.
   **支持 GitHub 仓库** — 传入 GitHub URL 或 `owner/repo` 简写，工具会自动浅克隆到临时目录并在完成后清理。
 
-- 💬 **Interactive & Scriptable** — Enjoy a modern interactive UI (spinner, confirm, select) in TTY mode, or use `--print` for non-interactive scripting.
-  **交互式与脚本友好** — 在 TTY 模式下享受现代化交互界面（spinner、确认、选择），或使用 `--print` 参数进行非交互式脚本操作。
+- 💬 **Interactive & Scriptable** — Enjoy a modern interactive UI (spinner, confirm, select) in TTY mode, or use `--print` / `--json` for non-interactive scripting.
+  **交互式与脚本友好** — 在 TTY 模式下享受现代化交互界面（spinner、确认、选择），或使用 `--print` / `--json` 参数进行非交互式脚本操作。
 
 - 🛡️ **Robust Error Handling** — Automatic retries with exponential backoff for transient API errors, and graceful fallbacks to prevent corrupted output.
   **健壮的错误处理** — 对瞬时 API 错误进行指数退避重试，并提供优雅降级以防止输出损坏。
@@ -37,8 +43,8 @@
 - 🔑 **BYOK (Bring Your Own Key)** — Use your own API key from 8+ providers (DeepSeek, OpenAI, Kimi, GLM, Qwen, MiniMax, Grok, SiliconFlow) or any OpenAI-compatible endpoint. Zero server-side costs, and your code is only sent to the API you configure.
   **BYOK 自带 API Key** — 支持 DeepSeek、OpenAI、Kimi、GLM、通义千问、MiniMax、Grok、硅基流动等 8+ 家国内外提供商，以及任意 OpenAI 兼容端点。零服务端成本，代码仅发送至你配置的 API。
 
-- 🧪 **Comprehensive Testing** — 66+ unit and end-to-end tests covering file filtering, token budgeting, git integration, LLM error handling, provider resolution, and more.
-  **全面测试覆盖** — 66+ 单元测试与端到端测试，覆盖文件过滤、Token 预算、Git 集成、LLM 错误处理、提供商解析等核心逻辑。
+- 🧪 **Comprehensive Testing** — 88+ unit and end-to-end tests covering file filtering, token budgeting, git integration, LLM error handling, provider resolution, config persistence, and more.
+  **全面测试覆盖** — 88+ 单元测试与端到端测试，覆盖文件过滤、Token 预算、Git 集成、LLM 错误处理、提供商解析、配置持久化等核心逻辑。
 
 ---
 
@@ -71,7 +77,19 @@ npx repo-ai-cli --help
 ### Set up your API Key — 配置 API Key
 
 ```bash
-# Any of the 8+ built-in providers (choose one):
+# 推荐：一次配置，长期生效（保存到 ~/.repo-ai/config.json）
+repo-ai-cli config set provider deepseek
+repo-ai-cli config set apiKey sk-xxx
+
+# 或交互式向导
+repo-ai-cli config init
+
+# 查看/清除配置（apiKey 自动打码显示）
+repo-ai-cli config list
+repo-ai-cli config unset apiKey
+repo-ai-cli config reset
+
+# 传统方式：任何一家内置提供商的环境变量（任选其一）：
 export DEEPSEEK_API_KEY=sk-xxx          # DeepSeek
 export OPENAI_API_KEY=sk-xxx            # OpenAI
 export MOONSHOT_API_KEY=sk-xxx          # Kimi
@@ -90,7 +108,7 @@ repo-ai-cli readme --provider moonshot
 repo-ai-cli readme --provider siliconflow --model Qwen/Qwen2.5-7B-Instruct
 ```
 
-*Windows (cmd) 用 `set VAR=xxx`，PowerShell 用 `$env:VAR="xxx"`。*
+*配置优先级：CLI 参数 > 环境变量 > config 文件 > 默认值。Windows (cmd) 用 `set VAR=xxx`，PowerShell 用 `$env:VAR="xxx"`。*
 
 ### Generate a README — 生成 README
 
@@ -126,6 +144,37 @@ repo-ai-cli commit --print
 
 # Force a specific commit type
 repo-ai-cli commit --type feat
+```
+
+### Generate a CHANGELOG — 生成 CHANGELOG
+
+```bash
+# From the last git tag to HEAD (default)
+repo-ai-cli changelog
+
+# Custom git range
+repo-ai-cli changelog --range v0.1.0..v0.2.0
+
+# Print to stdout without writing the file
+repo-ai-cli changelog --print
+
+# English output
+repo-ai-cli changelog -l en
+```
+
+### Script-friendly JSON output — 脚本友好的 JSON 输出
+
+所有命令支持 `--json`，输出机器可读结果，便于接入 CI/脚本：
+
+```bash
+repo-ai-cli readme --dry-run --json
+# {"ok":true,"dryRun":true,"repo":"repo-ai","filesCollected":43,"estimatedTokens":20784,...}
+
+repo-ai-cli commit --json
+# {"ok":true,"message":"feat: add config persistence"}
+
+repo-ai-cli changelog --json
+# {"ok":true,"output":"E:\\repo-ai\\CHANGELOG.md","bytes":1234}
 ```
 
 ---
@@ -174,11 +223,42 @@ repo-ai-cli commit --type feat
 | `--staged` | Use staged changes (git diff --cached) | `true` |
 | `--all` | Include unstaged changes (git diff HEAD) | `false` |
 | `--print` | Print the message without interaction | `false` |
+| `--json` | Output machine-readable JSON | `false` |
 | `--type <type>` | Force a commit type (e.g., `feat`, `fix`, `docs`) | Auto-detect |
 | `--max-diff-kb <n>` | Maximum diff size to process (in KB) | `200` |
 | `--provider <id>` | LLM provider (same as `readme`) | auto-detect |
 | `--base-url <url>` | Custom OpenAI-compatible endpoint | provider default |
 | `--model <name>` | Model name override | provider default |
+
+#### `repo-ai-cli changelog`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-o, --output <file>` | Output file path | `CHANGELOG.md` |
+| `-r, --range <range>` | Git range (`v1.0.0..` / `..HEAD` / `1.0.0..2.0.0`) | last tag..HEAD |
+| `-n, --max <n>` | Max commits to consider | `50` |
+| `-l, --language <lang>` | Output language: `zh` \| `en` | `zh` |
+| `--dry-run` | Print statistics only, do not call the API | `false` |
+| `--print` | Print to stdout without writing file | `false` |
+| `--json` | Output machine-readable JSON | `false` |
+| `--max-output-tokens <n>` | Max LLM output tokens | `4096` |
+| `--temperature <n>` | Sampling temperature 0~2 | `0.5` |
+| `--provider <id>` | LLM provider (same as `readme`) | auto-detect |
+| `--base-url <url>` | Custom OpenAI-compatible endpoint | provider default |
+| `--model <name>` | Model name override | provider default |
+
+#### `repo-ai-cli config`
+
+| Command | Description |
+|---------|-------------|
+| `config init` | Interactive wizard: pick provider + enter API key |
+| `config set <key> <value>` | Set a value (`provider`/`baseUrl`/`model`/`apiKey`/`maxTokens`/...) |
+| `config get <key>` | Print a value (apiKey masked) |
+| `config list` (`ls`) | Show all persisted config (apiKey masked) |
+| `config unset <key>` | Remove a value |
+| `config reset` | Clear all persisted config |
+
+*配置文件位于 `~/.repo-ai/config.json`（POSIX 0600 权限），apiKey 明文存储但仅在用户目录内。*
 
 ---
 
