@@ -19,121 +19,133 @@ program
   .description("AI-powered repo helper: bilingual README + conventional commits + CHANGELOG")
   .version(pkg.version);
 
-program
-  .command("readme")
-  .description("Generate a README for a local directory or GitHub repo")
-  .argument("[path-or-url]", "local directory path (default: current dir)", ".")
-  .option("-o, --output <file>", "output file", "README.md")
-  .option(
-    "-l, --language <lang>",
-    "bilingual | zh | en",
-    "bilingual",
-  )
-  .option("--dry-run", "print stats only, do not call API")
-  .option("--max-tokens <n>", "token budget", (v) => parseInt(v, 10), 48000)
-  .option("--max-file-kb <n>", "max single-file size in KB", (v) => parseInt(v, 10), 100)
-  .option("--max-output-tokens <n>", "max LLM output tokens", (v) => parseInt(v, 10), 8192)
-  .option("--temperature <n>", "sampling temperature 0~2", (v) => parseFloat(v), 0.7)
-  .option("--json", "output machine-readable JSON")
-  .option("--provider <id>", "LLM provider: deepseek|openai|moonshot|zhipu|qwen|minimax|xai|siliconflow")
-  .option("--base-url <url>", "custom OpenAI-compatible endpoint (overrides provider)")
-  .option("--model <name>", "model name (overrides provider default)")
-  .option("--api-key <key>", "API key (prefer env vars / config set; avoid in shell history)")
-  .action(async (target: string, opts: Record<string, unknown>) => {
-    try {
-      await runReadme({
-        target,
-        output: opts.output as string,
-        language: opts.language as "bilingual" | "zh" | "en",
-        dryRun: Boolean(opts.dryRun),
-        maxTokens: opts.maxTokens as number,
-        maxFileKb: opts.maxFileKb as number,
-        maxOutputTokens: opts.maxOutputTokens as number,
-        temperature: opts.temperature as number,
-        json: Boolean(opts.json),
-        provider: opts.provider as string | undefined,
-        baseUrl: opts.baseUrl as string | undefined,
-        model: opts.model as string | undefined,
-        apiKey: opts.apiKey as string | undefined,
-      });
-    } catch (err) {
-      handleError(err, Boolean(opts.json));
-    }
-  });
+/** 给命令挂上 4 个共用的 LLM 选项（provider/base-url/model/api-key） */
+function withLLMOptions(cmd: Command): Command {
+  return cmd
+    .option(
+      "--provider <id>",
+      "LLM provider: deepseek|openai|moonshot|zhipu|qwen|minimax|xai|siliconflow",
+    )
+    .option("--base-url <url>", "custom OpenAI-compatible endpoint (overrides provider)")
+    .option("--model <name>", "model name (overrides provider default)")
+    .option(
+      "--api-key <key>",
+      "API key (prefer env vars / config set; avoid in shell history)",
+    );
+}
 
-program
-  .command("commit")
-  .description("Generate a conventional commit message from git diff")
-  .option("--staged", "use staged changes (default)", true)
-  .option("--all", "include unstaged changes")
-  .option("--print", "print message without interaction")
-  .option("--json", "output machine-readable JSON")
-  .option("--type <type>", "force commit type (feat/fix/docs/...)")
-  .option("--max-diff-kb <n>", "max diff size in KB", (v) => parseInt(v, 10), 200)
-  .option("--max-output-tokens <n>", "max LLM output tokens", (v) => parseInt(v, 10), 1024)
-  .option("--temperature <n>", "sampling temperature 0~2", (v) => parseFloat(v), 0.3)
-  .option("--provider <id>", "LLM provider: deepseek|openai|moonshot|zhipu|qwen|minimax|xai|siliconflow")
-  .option("--base-url <url>", "custom OpenAI-compatible endpoint (overrides provider)")
-  .option("--model <name>", "model name (overrides provider default)")
-  .option("--api-key <key>", "API key (prefer env vars / config set; avoid in shell history)")
-  .action(async (opts: Record<string, unknown>) => {
-    try {
-      await runCommit({
-        staged: Boolean(opts.staged),
-        all: Boolean(opts.all),
-        print: Boolean(opts.print),
-        json: Boolean(opts.json),
-        type: opts.type as string | undefined,
-        maxDiffKb: opts.maxDiffKb as number,
-        maxOutputTokens: opts.maxOutputTokens as number,
-        temperature: opts.temperature as number,
-        provider: opts.provider as string | undefined,
-        baseUrl: opts.baseUrl as string | undefined,
-        model: opts.model as string | undefined,
-        apiKey: opts.apiKey as string | undefined,
-      });
-    } catch (err) {
-      handleError(err, Boolean(opts.json));
-    }
-  });
+const readmeCmd = withLLMOptions(
+  program
+    .command("readme")
+    .description("Generate a README for a local directory or GitHub repo")
+    .argument("[path-or-url]", "local directory path (default: current dir)", ".")
+    .option("-o, --output <file>", "output file", "README.md")
+    .option(
+      "-l, --language <lang>",
+      "bilingual | zh | en",
+      "bilingual",
+    )
+    .option("--dry-run", "print stats only, do not call API")
+    .option("--max-tokens <n>", "token budget", (v) => parseInt(v, 10), 48000)
+    .option("--max-file-kb <n>", "max single-file size in KB", (v) => parseInt(v, 10), 100)
+    .option("--max-output-tokens <n>", "max LLM output tokens", (v) => parseInt(v, 10), 8192)
+    .option("--temperature <n>", "sampling temperature 0~2", (v) => parseFloat(v), 0.7)
+    .option("--json", "output machine-readable JSON"),
+);
 
-program
-  .command("changelog")
-  .description("Generate a CHANGELOG.md from git log (since last tag by default)")
-  .option("-o, --output <file>", "output file", "CHANGELOG.md")
-  .option("-r, --range <range>", "git range (v1.0.0.. / ..HEAD / 1.0.0..2.0.0); default: last tag..HEAD")
-  .option("-n, --max <n>", "max commits to consider", (v) => parseInt(v, 10), 50)
-  .option("-l, --language <lang>", "zh | en", "zh")
-  .option("--dry-run", "print stats only, do not call API")
-  .option("--print", "print changelog without writing file")
-  .option("--json", "output machine-readable JSON")
-  .option("--max-output-tokens <n>", "max LLM output tokens", (v) => parseInt(v, 10), 4096)
-  .option("--temperature <n>", "sampling temperature 0~2", (v) => parseFloat(v), 0.5)
-  .option("--provider <id>", "LLM provider: deepseek|openai|moonshot|zhipu|qwen|minimax|xai|siliconflow")
-  .option("--base-url <url>", "custom OpenAI-compatible endpoint (overrides provider)")
-  .option("--model <name>", "model name (overrides provider default)")
-  .option("--api-key <key>", "API key (prefer env vars / config set; avoid in shell history)")
-  .action(async (opts: Record<string, unknown>) => {
-    try {
-      await runChangelog({
-        range: opts.range as string | undefined,
-        max: opts.max as number,
-        output: opts.output as string,
-        language: opts.language as "zh" | "en",
-        dryRun: Boolean(opts.dryRun),
-        print: Boolean(opts.print),
-        json: Boolean(opts.json),
-        maxOutputTokens: opts.maxOutputTokens as number,
-        temperature: opts.temperature as number,
-        provider: opts.provider as string | undefined,
-        baseUrl: opts.baseUrl as string | undefined,
-        model: opts.model as string | undefined,
-        apiKey: opts.apiKey as string | undefined,
-      });
-    } catch (err) {
-      handleError(err, Boolean(opts.json));
-    }
-  });
+readmeCmd.action(async (target: string, opts: Record<string, unknown>) => {
+  try {
+    await runReadme({
+      target,
+      output: opts.output as string,
+      language: opts.language as "bilingual" | "zh" | "en",
+      dryRun: Boolean(opts.dryRun),
+      maxTokens: opts.maxTokens as number,
+      maxFileKb: opts.maxFileKb as number,
+      maxOutputTokens: opts.maxOutputTokens as number,
+      temperature: opts.temperature as number,
+      json: Boolean(opts.json),
+      provider: opts.provider as string | undefined,
+      baseUrl: opts.baseUrl as string | undefined,
+      model: opts.model as string | undefined,
+      apiKey: opts.apiKey as string | undefined,
+    });
+  } catch (err) {
+    handleError(err, Boolean(opts.json));
+  }
+});
+
+const commitCmd = withLLMOptions(
+  program
+    .command("commit")
+    .description("Generate a conventional commit message from git diff")
+    .option("--staged", "use staged changes (default)", true)
+    .option("--all", "include unstaged changes")
+    .option("--print", "print message without interaction")
+    .option("--json", "output machine-readable JSON")
+    .option("--type <type>", "force commit type (feat/fix/docs/...)")
+    .option("--max-diff-kb <n>", "max diff size in KB", (v) => parseInt(v, 10), 200)
+    .option("--max-output-tokens <n>", "max LLM output tokens", (v) => parseInt(v, 10), 1024)
+    .option("--temperature <n>", "sampling temperature 0~2", (v) => parseFloat(v), 0.3),
+);
+
+commitCmd.action(async (opts: Record<string, unknown>) => {
+  try {
+    await runCommit({
+      staged: Boolean(opts.staged),
+      all: Boolean(opts.all),
+      print: Boolean(opts.print),
+      json: Boolean(opts.json),
+      type: opts.type as string | undefined,
+      maxDiffKb: opts.maxDiffKb as number,
+      maxOutputTokens: opts.maxOutputTokens as number,
+      temperature: opts.temperature as number,
+      provider: opts.provider as string | undefined,
+      baseUrl: opts.baseUrl as string | undefined,
+      model: opts.model as string | undefined,
+      apiKey: opts.apiKey as string | undefined,
+    });
+  } catch (err) {
+    handleError(err, Boolean(opts.json));
+  }
+});
+
+const changelogCmd = withLLMOptions(
+  program
+    .command("changelog")
+    .description("Generate a CHANGELOG.md from git log (since last tag by default)")
+    .option("-o, --output <file>", "output file", "CHANGELOG.md")
+    .option("-r, --range <range>", "git range (v1.0.0.. / ..HEAD / 1.0.0..2.0.0); default: last tag..HEAD")
+    .option("-n, --max <n>", "max commits to consider", (v) => parseInt(v, 10), 50)
+    .option("-l, --language <lang>", "zh | en", "zh")
+    .option("--dry-run", "print stats only, do not call API")
+    .option("--print", "print changelog without writing file")
+    .option("--json", "output machine-readable JSON")
+    .option("--max-output-tokens <n>", "max LLM output tokens", (v) => parseInt(v, 10), 4096)
+    .option("--temperature <n>", "sampling temperature 0~2", (v) => parseFloat(v), 0.5),
+);
+
+changelogCmd.action(async (opts: Record<string, unknown>) => {
+  try {
+    await runChangelog({
+      range: opts.range as string | undefined,
+      max: opts.max as number,
+      output: opts.output as string,
+      language: opts.language as "zh" | "en",
+      dryRun: Boolean(opts.dryRun),
+      print: Boolean(opts.print),
+      json: Boolean(opts.json),
+      maxOutputTokens: opts.maxOutputTokens as number,
+      temperature: opts.temperature as number,
+      provider: opts.provider as string | undefined,
+      baseUrl: opts.baseUrl as string | undefined,
+      model: opts.model as string | undefined,
+      apiKey: opts.apiKey as string | undefined,
+    });
+  } catch (err) {
+    handleError(err, Boolean(opts.json));
+  }
+});
 
 // config 子命令组：repo-ai-cli config <get|set|unset|reset|list|init>
 const configCmd = program

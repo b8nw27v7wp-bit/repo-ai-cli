@@ -1,48 +1,25 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { intro, outro, spinner, log } from "@clack/prompts";
+import { intro } from "@clack/prompts";
 import { collectFiles } from "../lib/collect-files.js";
 import { buildFileTree } from "../lib/file-tree.js";
 import { allocateBudget, estimateTokens } from "../lib/token-budget.js";
-import { chatCompletion } from "../lib/llm.js";
+import { chatCompletion, llmConfigFromOptions } from "../lib/llm.js";
 import { buildReadmePrompt, type ReadmeLanguage } from "../prompts/readme.js";
 import { writeOutput } from "../lib/output.js";
 import { parseGithubRef, cloneRepo } from "../lib/github.js";
 import { loadConfig } from "../lib/config.js";
+import {
+  interactive,
+  setJsonMode,
+  isJsonMode,
+  emitJson,
+  say,
+  done,
+  fail,
+  progress,
+} from "../lib/ui.js";
 import type { ReadmeOptions } from "../types.js";
-
-/** 非 TTY（管道/CI）时 clack 的 spinner 会疯狂重绘，降级为普通日志 */
-const interactive = Boolean(process.stdout.isTTY);
-
-/** JSON 输出模式（模块级标志，由 runReadme 设置） */
-let jsonMode = false;
-
-function emitJson(obj: Record<string, unknown>): void {
-  console.log(JSON.stringify(obj));
-}
-
-function say(msg: string): void {
-  if (jsonMode) return;
-  if (interactive) log.info(msg);
-  else console.log(msg);
-}
-
-function done(msg: string): void {
-  if (jsonMode) return;
-  if (interactive) outro(`✓ ${msg}`);
-  else console.log(`✓ ${msg}`);
-}
-
-function fail(msg: string): void {
-  if (jsonMode) {
-    emitJson({ ok: false, error: msg });
-    process.exitCode = 1;
-    return;
-  }
-  if (interactive) outro(`✖ ${msg}`);
-  else console.error(`✖ ${msg}`);
-  process.exitCode = 1;
-}
 
 const isUrlLike = (s: string) =>
   /^(https?:\/\/|git@|[\w.-]+\/[\w.-]+(#|$))/.test(s) && !s.startsWith(".");
@@ -56,44 +33,14 @@ async function pathExists(p: string): Promise<boolean> {
   }
 }
 
-/** 进度提示：TTY 用 spinner，非 TTY 打印静态行 */
-function progress(label: string) {
-  let current = label;
-  if (interactive) {
-    const s = spinner();
-    s.start(label);
-    return {
-      update(next: string) {
-        current = next;
-        s.start(next);
-      },
-      stop(msg?: string) {
-        s.stop(msg ?? current);
-      },
-    };
-  }
-  console.log(`... ${label}`);
-  return {
-    update(next: string) {
-      current = next;
-      console.log(`... ${next}`);
-    },
-    stop(msg?: string) {
-      // 无参 stop 不重复打印（update 已打过最新状态）
-      if (msg) console.log(`... ${msg}`);
-    },
-  };
-}
-
 /**
  * repo-ai readme — 生成中英双语 README。
  * 输入：本地目录 或 GitHub 仓库（owner/repo 或完整 URL）。
  */
 export async function runReadme(options: ReadmeOptions): Promise<void> {
-  if (interactive) intro("repo-ai readme");
+  setJsonMode(options.json === true);
+  if (interactive && !isJsonMode()) intro("repo-ai readme");
 
-  const json = options.json === true;
-  jsonMode = json;
   const cfg = await loadConfig();
 
   const target = options.target || ".";
@@ -171,7 +118,7 @@ export async function runReadme(options: ReadmeOptions): Promise<void> {
       const included = budget.files.filter((f) => f.mode !== "skip");
       const full = included.filter((f) => f.mode === "full").length;
       const sampled = included.length - full;
-      if (jsonMode) {
+      if (isJsonMode()) {
         emitJson({
           ok: true,
           dryRun: true,
@@ -205,15 +152,7 @@ export async function runReadme(options: ReadmeOptions): Promise<void> {
     const messages = buildReadmePrompt(repoName, budget, language);
     let content: string;
     try {
-      content = await chatCompletion(messages, {
-        provider: options.provider,
-        baseUrl: options.baseUrl,
-        model: options.model,
-        apiKey: options.apiKey,
-        maxTokens: options.maxOutputTokens,
-        temperature: options.temperature,
-        config: cfg,
-      });
+      content = await chatCompletion(messages, llmConfigFromOptions(options, cfg));
     } catch (err) {
       progressBar.stop("生成失败");
       fail((err as Error).message);
@@ -229,7 +168,7 @@ export async function runReadme(options: ReadmeOptions): Promise<void> {
     // 5. 写文件
     const outputPath = options.output ?? "README.md";
     const abs = await writeOutput(content, outputPath);
-    if (jsonMode) {
+    if (isJsonMode()) {
       emitJson({ ok: true, output: abs, bytes: Buffer.byteLength(content) });
       return;
     }

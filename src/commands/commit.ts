@@ -1,54 +1,18 @@
-import { intro, outro, spinner, confirm, select, log, text } from "@clack/prompts";
+import { intro, spinner, confirm, select, log, text } from "@clack/prompts";
 import { getDiff, assertInGitRepo } from "../lib/git.js";
-import { chatCompletion } from "../lib/llm.js";
+import { chatCompletion, llmConfigFromOptions } from "../lib/llm.js";
 import { buildCommitPrompt } from "../prompts/commit.js";
 import { loadConfig } from "../lib/config.js";
+import {
+  interactive,
+  setJsonMode,
+  isJsonMode,
+  emitJson,
+  done,
+  fail,
+  progress,
+} from "../lib/ui.js";
 import type { CommitOptions } from "../types.js";
-
-const interactive = Boolean(process.stdout.isTTY);
-
-/** JSON 输出模式（模块级标志） */
-let jsonMode = false;
-
-function emitJson(obj: Record<string, unknown>): void {
-  console.log(JSON.stringify(obj));
-}
-
-function progress(label: string) {
-  if (interactive && !jsonMode) {
-    const s = spinner();
-    s.start(label);
-    return {
-      stop(msg?: string) {
-        s.stop(msg ?? label);
-      },
-    };
-  }
-  if (!jsonMode) console.log(`... ${label}`);
-  return {
-    stop(msg?: string) {
-      // 无参 stop 不重复打印
-      if (msg && !jsonMode) console.log(`... ${msg}`);
-    },
-  };
-}
-
-function done(msg: string): void {
-  if (jsonMode) return;
-  if (interactive) outro(`✓ ${msg}`);
-  else console.log(`✓ ${msg}`);
-}
-
-function fail(msg: string): void {
-  if (jsonMode) {
-    emitJson({ ok: false, error: msg });
-    process.exitCode = 1;
-    return;
-  }
-  if (interactive) outro(`✖ ${msg}`);
-  else console.error(`✖ ${msg}`);
-  process.exitCode = 1;
-}
 
 /** 去掉可能的 ``` 代码块包裹 / 首尾空白 */
 function cleanMessage(raw: string): string {
@@ -62,9 +26,9 @@ function cleanMessage(raw: string): string {
 }
 
 export async function runCommit(options: CommitOptions): Promise<void> {
-  jsonMode = options.json === true;
+  setJsonMode(options.json === true);
   const cfg = await loadConfig();
-  if (interactive && !jsonMode) intro("repo-ai commit");
+  if (interactive && !isJsonMode()) intro("repo-ai commit");
 
   const cwd = process.cwd();
   try {
@@ -110,15 +74,7 @@ export async function runCommit(options: CommitOptions): Promise<void> {
     files: diffResult.files,
   });
 
-  const llmConfig = {
-    provider: options.provider,
-    baseUrl: options.baseUrl,
-    model: options.model,
-    apiKey: options.apiKey,
-    maxTokens: options.maxOutputTokens,
-    temperature: options.temperature,
-    config: cfg,
-  };
+  const llmConfig = llmConfigFromOptions(options, cfg);
 
   let message: string;
   try {
@@ -139,8 +95,8 @@ export async function runCommit(options: CommitOptions): Promise<void> {
   progressBar.stop();
 
   // 3. --print 或 --json：直接输出，不交互
-  if (options.print || jsonMode) {
-    if (jsonMode) emitJson({ ok: true, message });
+  if (options.print || isJsonMode()) {
+    if (isJsonMode()) emitJson({ ok: true, message });
     else console.log(message);
     return;
   }
