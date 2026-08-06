@@ -142,3 +142,29 @@ async function safeText(res: Response): Promise<string> {
     return "<无法读取响应体>";
   }
 }
+
+/**
+ * 从命令 options 构造 LLMConfig（三个命令共用的映射：maxOutputTokens → maxTokens）。
+ * config 为 ~/.repo-ai/config.json 的持久化配置（优先级低于 env，见 providers.ts）。
+ */
+export function llmConfigFromOptions(
+  options: {
+    provider?: string;
+    baseUrl?: string;
+    model?: string;
+    apiKey?: string;
+    maxOutputTokens?: number;
+    temperature?: number;
+  },
+  config: LLMConfig["config"],
+): LLMConfig {
+  return {
+    provider: options.provider,
+    baseUrl: options.baseUrl,
+    model: options.model,
+    apiKey: options.apiKey,
+    maxTokens: options.maxOutputTokens,
+    temperature: options.temperature,
+    config,
+  };
+}

@@ -255,6 +255,14 @@ jobs:
 - [x] 测试 66 → 88（config 读写/打码、provider 优先级、changelog prompt、getLog）
 - **验收**：✅ 三条命令真实 LLM 生成均通过（NVIDIA 免费端点冒烟）；config set/list/unset/reset 全流程可用
 
+### M7 — v0.3.1 重构：共享 UI helpers + 去重
+- [x] `src/lib/ui.ts`：统一 emitJson/say/done/fail/progress + jsonMode 状态（TTY spinner / 非 TTY 静态行 / --json 静默三分支）
+- [x] 三个命令（readme/commit/changelog）删除本地重复 helpers，改用 ui.ts；修复 readme progress 漏判 jsonMode 的不一致
+- [x] `llm.ts llmConfigFromOptions()`：三个命令重复的 LLMConfig 构造提取（maxOutputTokens → maxTokens 映射）
+- [x] `index.ts withLLMOptions()`：消除 3 × 4 行重复的 --provider/--base-url/--model/--api-key option 定义
+- [x] `config.ts writeConfigAtomic()`：saveConfig/unsetConfig 重复的 tmp+rename 原子写入提取（unset 也补上 0600 权限）
+- [x] 测试 88 全绿，tsc/eslint/build 干净；--help 各命令 LLM options 齐全，--json 输出无噪音
+
 ---
 
 ## 9. 风险与对策

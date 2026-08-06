@@ -69,7 +69,19 @@ export async function loadConfig(): Promise<RepoAIConfig> {
   }
 }
 
-/** 写入配置（合并已有值）。POSIX 上设置 0600 权限。 */
+/** 原子写入配置：先写同目录临时文件再 rename，避免半写状态。POSIX 上 0600 权限。 */
+async function writeConfigAtomic(next: RepoAIConfig): Promise<void> {
+  const tmp = `${getConfigPath()}.${process.pid}.tmp`;
+  await fs.writeFile(tmp, JSON.stringify(next, null, 2) + "\n", "utf8");
+  try {
+    await fs.chmod(tmp, 0o600);
+  } catch {
+    /* Windows 无 POSIX 权限位，忽略 */
+  }
+  await fs.rename(tmp, getConfigPath());
+}
+
+/** 写入配置（合并已有值）。 */
 export async function saveConfig(
   partial: RepoAIConfig,
 ): Promise<RepoAIConfig> {
@@ -81,14 +93,7 @@ export async function saveConfig(
   for (const k of Object.keys(next) as Array<keyof RepoAIConfig>) {
     if (next[k] === undefined) delete next[k];
   }
-  const tmp = `${getConfigPath()}.${process.pid}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(next, null, 2) + "\n", "utf8");
-  try {
-    await fs.chmod(tmp, 0o600);
-  } catch {
-    /* Windows 无 POSIX 权限位，忽略 */
-  }
-  await fs.rename(tmp, getConfigPath());
+  await writeConfigAtomic(next);
   return next;
 }
 
@@ -96,9 +101,7 @@ export async function saveConfig(
 export async function unsetConfig(key: keyof RepoAIConfig): Promise<RepoAIConfig> {
   const existing = await loadConfig();
   delete existing[key];
-  const tmp = `${getConfigPath()}.${process.pid}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(existing, null, 2) + "\n", "utf8");
-  await fs.rename(tmp, getConfigPath());
+  await writeConfigAtomic(existing);
   return existing;
 }
 

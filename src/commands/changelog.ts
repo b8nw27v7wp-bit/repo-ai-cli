@@ -1,72 +1,22 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { intro, outro, spinner, log } from "@clack/prompts";
+import { intro } from "@clack/prompts";
 import { getLog, type CommitEntry } from "../lib/git.js";
-import { chatCompletion } from "../lib/llm.js";
+import { chatCompletion, llmConfigFromOptions } from "../lib/llm.js";
 import { buildChangelogPrompt } from "../prompts/changelog.js";
 import { writeOutput } from "../lib/output.js";
 import { loadConfig } from "../lib/config.js";
+import {
+  interactive,
+  setJsonMode,
+  isJsonMode,
+  emitJson,
+  say,
+  done,
+  fail,
+  progress,
+} from "../lib/ui.js";
 import type { ChangelogOptions } from "../types.js";
-
-const interactive = Boolean(process.stdout.isTTY);
-
-/** JSON 输出模式（模块级标志） */
-let jsonMode = false;
-
-function emitJson(obj: Record<string, unknown>): void {
-  console.log(JSON.stringify(obj));
-}
-
-function say(msg: string): void {
-  if (jsonMode) return;
-  if (interactive) log.info(msg);
-  else console.log(msg);
-}
-
-function done(msg: string): void {
-  if (jsonMode) return;
-  if (interactive) outro(`✓ ${msg}`);
-  else console.log(`✓ ${msg}`);
-}
-
-function fail(msg: string): void {
-  if (jsonMode) {
-    emitJson({ ok: false, error: msg });
-    process.exitCode = 1;
-    return;
-  }
-  if (interactive) outro(`✖ ${msg}`);
-  else console.error(`✖ ${msg}`);
-  process.exitCode = 1;
-}
-
-function progress(label: string) {
-  let current = label;
-  if (interactive && !jsonMode) {
-    const s = spinner();
-    s.start(label);
-    return {
-      update(next: string) {
-        current = next;
-        s.start(next);
-      },
-      stop(msg?: string) {
-        s.stop(msg ?? current);
-      },
-    };
-  }
-  if (!jsonMode) console.log(`... ${label}`);
-  return {
-    update(next: string) {
-      current = next;
-      if (!jsonMode) console.log(`... ${next}`);
-    },
-    stop(msg?: string) {
-      // 无参 stop 不重复打印（update 已打过最新状态）
-      if (msg && !jsonMode) console.log(`... ${msg}`);
-    },
-  };
-}
 
 /** 取最近一个 tag 作为默认区间起点（无 tag 则回退最近 N 条） */
 async function defaultRange(cwd: string): Promise<{ range?: string; label: string }> {
@@ -94,9 +44,9 @@ async function defaultRange(cwd: string): Promise<{ range?: string; label: strin
  * 默认区间：最近一个 tag 之后；无 tag 则最近 50 条。
  */
 export async function runChangelog(options: ChangelogOptions): Promise<void> {
-  jsonMode = options.json === true;
+  setJsonMode(options.json === true);
   const cfg = await loadConfig();
-  if (interactive && !jsonMode) intro("repo-ai changelog");
+  if (interactive && !isJsonMode()) intro("repo-ai changelog");
 
   const cwd = process.cwd();
   const progressBar = progress("读取 git log...");
@@ -141,7 +91,7 @@ export async function runChangelog(options: ChangelogOptions): Promise<void> {
   }
 
   if (options.dryRun) {
-    if (jsonMode) {
+    if (isJsonMode()) {
       emitJson({
         ok: true,
         dryRun: true,
@@ -174,15 +124,7 @@ export async function runChangelog(options: ChangelogOptions): Promise<void> {
 
   let content: string;
   try {
-    content = await chatCompletion(messages, {
-      provider: options.provider,
-      baseUrl: options.baseUrl,
-      model: options.model,
-      apiKey: options.apiKey,
-      maxTokens: options.maxOutputTokens,
-      temperature: options.temperature,
-      config: cfg,
-    });
+    content = await chatCompletion(messages, llmConfigFromOptions(options, cfg));
   } catch (err) {
     progressBar.stop("生成失败");
     fail((err as Error).message);
@@ -197,12 +139,12 @@ export async function runChangelog(options: ChangelogOptions): Promise<void> {
 
   // 写文件（或 --print 输出）
   if (options.print) {
-    if (jsonMode) emitJson({ ok: true, content: content.trim() });
+    if (isJsonMode()) emitJson({ ok: true, content: content.trim() });
     else console.log(content.trim());
     return;
   }
   const abs = await writeOutput(content.trim() + "\n", existingPath);
-  if (jsonMode) {
+  if (isJsonMode()) {
     emitJson({ ok: true, output: abs, bytes: Buffer.byteLength(content) });
     return;
   }
