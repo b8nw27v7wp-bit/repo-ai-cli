@@ -3,7 +3,7 @@ import os from "node:os";
 import { promises as fs } from "node:fs";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { intro, log, confirm } from "@clack/prompts";
+import { intro, confirm } from "@clack/prompts";
 import {
   assertInGitRepo,
   detectBaseBranch,
@@ -18,6 +18,7 @@ import {
   setJsonMode,
   isJsonMode,
   emitJson,
+  warn,
   done,
   fail,
   progress,
@@ -98,8 +99,7 @@ export async function runPr(options: PrOptions): Promise<void> {
   }
 
   if (diffResult.truncated) {
-    if (interactive) log.warn("diff 过大已截断，PR 描述可能不完整");
-    else console.warn("warning: diff 过大已截断，PR 描述可能不完整");
+    warn("diff 过大已截断，PR 描述可能不完整");
   }
 
   // 3. 生成

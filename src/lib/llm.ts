@@ -89,67 +89,59 @@ export async function chatCompletion(
       await sleep(backoff);
     }
 
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    let res: Response;
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-      let res: Response;
-      try {
-        res = await fetch(spec.url, {
-          method: "POST",
-          headers: spec.headers,
-          body: spec.body,
-          signal: controller.signal,
-        });
-      } catch (err) {
-        if (err instanceof Error && err.name === "AbortError") {
-          lastError = new LLMError(
-            `请求超时（${timeoutMs / 1000}s）`,
-            "timeout",
-          );
-          continue;
-        }
-        lastError = new LLMError(`网络错误: ${String(err)}`, "network");
-        continue;
-      } finally {
-        clearTimeout(timer);
-      }
-
-      if (res.status === 401 || res.status === 403) {
-        throw new LLMError(
-          `API key 无效或被拒绝（HTTP ${res.status}）。请检查 ${spec.providerName} 的 key。`,
-          "http-error",
-        );
-      }
-      if (RETRYABLE_STATUS.has(res.status)) {
-        lastError = new LLMError(
-          `服务端错误 HTTP ${res.status}（${spec.providerName}）`,
-          res.status === 429 ? "rate-limit" : "server-error",
-        );
-        continue;
-      }
-      if (!res.ok) {
-        throw new LLMError(`HTTP ${res.status}: ${await safeText(res)}`, "http-error");
-      }
-
-      const data = (await res.json()) as {
-        choices?: Array<{ message?: { content?: string } }>;
-        error?: { message?: string };
-      };
-      if (data.error?.message) {
-        throw new LLMError(`API 返回错误: ${data.error.message}`, "http-error");
-      }
-
-      const content = data.choices?.[0]?.message?.content?.trim();
-      if (!content) {
-        lastError = new LLMError("API 返回空响应", "empty-response");
-        continue;
-      }
-      return content;
+      res = await fetch(spec.url, {
+        method: "POST",
+        headers: spec.headers,
+        body: spec.body,
+        signal: controller.signal,
+      });
     } catch (err) {
-      if (err instanceof LLMError && err.kind !== "http-error") throw err;
-      throw err;
+      if (err instanceof Error && err.name === "AbortError") {
+        lastError = new LLMError(`请求超时（${timeoutMs / 1000}s）`, "timeout");
+        continue;
+      }
+      lastError = new LLMError(`网络错误: ${String(err)}`, "network");
+      continue;
+    } finally {
+      clearTimeout(timer);
     }
+
+    if (res.status === 401 || res.status === 403) {
+      throw new LLMError(
+        `API key 无效或被拒绝（HTTP ${res.status}）。请检查 ${spec.providerName} 的 key。`,
+        "http-error",
+      );
+    }
+    if (RETRYABLE_STATUS.has(res.status)) {
+      lastError = new LLMError(
+        `服务端错误 HTTP ${res.status}（${spec.providerName}）`,
+        res.status === 429 ? "rate-limit" : "server-error",
+      );
+      continue;
+    }
+    if (!res.ok) {
+      throw new LLMError(`HTTP ${res.status}: ${await safeText(res)}`, "http-error");
+    }
+
+    const data = (await res.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+      error?: { message?: string };
+    };
+    if (data.error?.message) {
+      throw new LLMError(`API 返回错误: ${data.error.message}`, "http-error");
+    }
+
+    const content = data.choices?.[0]?.message?.content?.trim();
+    if (!content) {
+      lastError = new LLMError("API 返回空响应", "empty-response");
+      continue;
+    }
+    return content;
   }
 
   // 不可达：for 循环内所有退出路径都有 throw/continue，这里仅作类型收窄防御

@@ -282,6 +282,63 @@ jobs:
 - [x] `explain` 支持 `file#symbol` 符号聚焦；`pr` 支持 `--create`（gh pr create）；`init` 支持 TTY 交互式选择模板/项目名
 - **验收**：`explain` 读文件到 LLM 环节；`pr` 正确检测 base；`init --json` 产出完整项目；`--stream` SSE 拼接正确
 
+### M10 — secrets / doctor 命令 + 健壮性收敛
+- [x] 新增 `repo-ai secrets`：离线扫描硬编码密钥（GitHub/AWS/Slack/Stripe/OpenAI/Google/私钥/通用赋值），按 critical/high/medium 分级、打码输出、CI 退出码
+- [x] 新增 `repo-ai doctor`：Node 版本 / git 仓库 / 持久化配置 / LLM key 四项体检（离线）
+- [x] `lib/secret-patterns.ts`（模式表 + maskValue）、`lib/scan-secrets.ts`、`lib/doctor.ts`
+- [x] `git.ts getDiff --all` 纳入 untracked 新文件（commit/review --all 不再漏掉新增文件）；新增 `getLatestTag`
+- [x] `config set` 数值范围校验（temperature 0~2、其余正整数）；提取 `validateNumericValue`
+- [x] 移除 `llm.ts` 死代码 catch；`changelog.ts defaultRange` 改用 `getLatestTag`；`config.ts init` 去重 clack 动态导入
+- [x] 测试 118 → 135（scan-secrets/doctor/config-validation/untracked）
+- **验收**：`secrets --severity high --json` 命中并打码；`doctor --json` 四项齐全；`getDiff --all` 含 untracked
+
+### M11 — 仓库工具集（gitignore / license / stats / deps / translate）
+- [x] `gitignore`：内置 16 套语言/框架模板，可组合 + 去重，`--list` 查看，离线
+- [x] `license`：内置 6 套开源许可（MIT/ISC/BSD-2/BSD-3/Unlicense/MIT-0），自动注入年份/署名
+- [x] `stats`：文件数 / LOC / 语言分布 / 提交数 / 贡献者（`getRepoMeta`），离线
+- [x] `deps`：解析 package.json / requirements.txt，离线
+- [x] `translate`：AI 文档中英互译（zh/en/bilingual），复用 llm.ts
+- [x] `git.ts` 新增 `getRepoMeta` / `getGitUserName`
+- [x] 测试 135 → 152（gitignore/license/stats/deps/translate prompt）
+- **验收**：5 条离线命令 `--json` 全通；`translate` 到 LLM 环节正确失败（无 key）
+
+### M12 — P0 路线图：test / refactor / hooks + 代码审查
+- [x] `test` 命令：AI 生成单元测试（vitest/jest/node-test），覆盖正常/边界/异常分支，禁止编造 API
+- [x] `refactor` 命令：AI 重构建议（all/readability/perf/complexity/types），只给建议不改代码
+- [x] `hooks` 命令：prepare-commit-msg 钩子 install/uninstall/list，覆盖前自动备份旧钩子
+- [x] `lib/git-hooks.ts`（HOOK_MARKER 识别）、`prompts/test.ts`、`prompts/refactor.ts`、`git.ts getGitDir`
+- [x] 代码审查：`ui.ts` 新增 `warn()`，统一 commit/review/pr/readme 截断告警并正确遵循 `--json` 静默
+- [x] 测试 152 → 163（test/refactor prompt、hooks 安装/备份/卸载）
+- **验收**：`hooks install/uninstall/list` 端到端可用；`test`/`refactor` 到 LLM 环节正确失败（无 key）
+
+### M13 — ask / fix / release + 材料收集去重
+- [x] `ask` 命令：针对代码库提问（RAG），复用 `collectFiles` + `token-budget`，支持 `--stream`
+- [x] `fix` 命令：根据 bug 描述定位根因 + 结构化修复建议（不改代码）
+- [x] `release` 命令：语义化版本建议（离线幂等）+ `--bump major|minor|patch|auto` + `--tag`
+- [x] 抽取 `lib/materials.ts`（`collectMaterials` / `buildMaterialsSection`），readme/ask/fix 复用去重
+- [x] `lib/version.ts`（`parseSemver`/`computeNext`/`suggestNextVersion`/`bumpPackageVersion`）、`git.ts` `createTag`
+- [x] 测试 163 → 173（ask/fix prompt、version）
+- **验收**：`release --json` 正确建议 0.5.0（feat→minor）；`ask`/`fix` 到 LLM 环节正确失败（无 key）
+
+---
+
+## 11. 未来路线图（做大方向，按优先级排列）
+
+| 优先级 | 方向 | 说明 |
+|---|---|---|
+| ~~P0~~ ✅ | `test` 命令 | 根据文件生成单元测试（已完成，支持 vitest/jest/node-test） |
+| ~~P0~~ ✅ | `refactor` 命令 | 给出重构建议（已完成，5 个维度） |
+| ~~P0~~ ✅ | `hooks` 命令 | 安装 git `prepare-commit-msg` 钩子（已完成） |
+| ~~P1~~ ✅ | `ask` 命令 | 代码库问答 RAG（已完成，支持 --stream） |
+| ~~P1~~ ✅ | `fix` 命令 | bug 定位 + 修复建议（已完成） |
+| ~~P1~~ ✅ | `release` 命令 | 语义化版本建议 + bump + tag（已完成） |
+| P1 | `badges` / `contributing` 生成 | 扩充 README 之外的项目治理文件生成 |
+| P1 | `deps --outdated` / `--audit` | 封装 npm outdated / npm audit，输出更友好的表格 |
+| P1 | 多 provider 补齐 | 增加 Claude / Gemini / 火山方舟 / 本地 Ollama 等 |
+| P2 | `--verbose` 全局调试 | 统一 debug 日志输出，排查网络/配置问题 |
+| P2 | 配置文件 profile | 多套 provider/model 配置切换（`--profile work`） |
+| P2 | GitHub PR review | `review-pr <url>` 拉取线上 PR 的 diff 做审查 |
+
 ---
 
 ## 9. 风险与对策
@@ -299,8 +356,8 @@ jobs:
 
 ## 10. 简历条目（预写）
 
-> **repo-ai-cli** — TypeScript CLI 工具（npm 发布 0.1.0，GitHub Actions 自动 CI/CD）
-> 用 AI 自动生成中英双语 README 与规范 commit message；实现 token 预算控制、.gitignore 感知的文件收集、LLM 调用重试与降级、GitHub 远程仓库浅克隆（含国内镜像回退）；66 单测覆盖过滤/预算/错误处理/提供商解析核心逻辑；支持 8+ 家国内外 LLM 提供商（DeepSeek/OpenAI/Kimi/GLM/通义/MiniMax/Grok/硅基流动）及任意 OpenAI 兼容端点；BYOK 零服务端成本。
+> **repo-ai-cli** — TypeScript CLI 工具（npm 发布，GitHub Actions 自动 CI/CD）
+> 21 条命令覆盖仓库助手全场景：AI 生成双语 README / 规范 commit / CHANGELOG / 代码审查 / 解释 / PR 描述 / 文档翻译 / 单元测试 / 重构建议 / bug 定位 / 代码库问答（RAG），以及离线的密钥扫描 / 环境体检 / .gitignore / LICENSE / 仓库统计 / 依赖解析 / 项目脚手架 / git 钩子 / 语义化版本发布；实现 token 预算控制、.gitignore 感知文件收集、LLM 重试与流式输出、GitHub 仓库浅克隆（含镜像回退）；支持 8+ 家国内外 LLM 提供商（DeepSeek/OpenAI/Kimi/GLM/通义/MiniMax/Grok/硅基流动）及任意 OpenAI 兼容端点；BYOK 零服务端成本；173 单测覆盖核心逻辑。
 
 ---
 

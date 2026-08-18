@@ -142,6 +142,167 @@ export interface InitOptions {
   json?: boolean;
 }
 
+export interface SecretsOptions {
+  /** 扫描目录（默认当前目录） */
+  target?: string;
+  /** 只报告 >= 此级别：critical | high | medium */
+  severity?: string;
+  /** 单文件扫描上限（KB） */
+  maxFileKb?: number;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface DoctorOptions {
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface GitignoreOptions {
+  /** 模板 id 列表（node/python/go/...），空则报错提示 --list */
+  templates?: string[];
+  /** 列出可用模板 */
+  list?: boolean;
+  /** 输出文件（默认 stdout） */
+  output?: string;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface LicenseOptions {
+  /** 许可 id：mit/isc/bsd-2-clause/bsd-3-clause/unlicense/mit-0 */
+  license?: string;
+  /** 版权人（默认 git config user.name） */
+  name?: string;
+  /** 年份（默认当前年） */
+  year?: string;
+  /** 输出文件（默认 LICENSE） */
+  output?: string;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface StatsOptions {
+  /** 目录（默认当前目录） */
+  target?: string;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface DepsOptions {
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface TranslateOptions {
+  /** 输入文件路径 */
+  file: string;
+  /** 目标语言：zh | en | bilingual */
+  to?: string;
+  /** 输出文件（默认 stdout） */
+  output?: string;
+  /** 单文件读取上限（KB） */
+  maxFileKb?: number;
+  provider?: string;
+  baseUrl?: string;
+  model?: string;
+  apiKey?: string;
+  maxOutputTokens?: number;
+  temperature?: number;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface TestOptions {
+  /** 输入文件路径 */
+  file: string;
+  /** 测试框架：vitest | jest | node-test */
+  framework?: string;
+  /** 输出文件（默认 stdout） */
+  output?: string;
+  /** 单文件读取上限（KB） */
+  maxFileKb?: number;
+  provider?: string;
+  baseUrl?: string;
+  model?: string;
+  apiKey?: string;
+  maxOutputTokens?: number;
+  temperature?: number;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface RefactorOptions {
+  /** 输入文件路径 */
+  file: string;
+  /** 聚焦维度：all | readability | perf | complexity | types */
+  focus?: string;
+  /** 输出文件（默认 stdout） */
+  output?: string;
+  /** 单文件读取上限（KB） */
+  maxFileKb?: number;
+  provider?: string;
+  baseUrl?: string;
+  model?: string;
+  apiKey?: string;
+  maxOutputTokens?: number;
+  temperature?: number;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface HooksOptions {
+  /** 钩子名（默认 prepare-commit-msg） */
+  hook?: string;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface AskOptions {
+  /** 向代码库提出的问题 */
+  question: string;
+  /** token 预算（用于材料收集） */
+  maxTokens?: number;
+  /** 单文件大小上限（KB） */
+  maxFileKb?: number;
+  provider?: string;
+  baseUrl?: string;
+  model?: string;
+  apiKey?: string;
+  maxOutputTokens?: number;
+  temperature?: number;
+  /** 流式输出（TTY 下边生成边打印） */
+  stream?: boolean;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface FixOptions {
+  /** bug 描述 */
+  description: string;
+  /** token 预算（用于材料收集） */
+  maxTokens?: number;
+  /** 单文件大小上限（KB） */
+  maxFileKb?: number;
+  provider?: string;
+  baseUrl?: string;
+  model?: string;
+  apiKey?: string;
+  maxOutputTokens?: number;
+  temperature?: number;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface ReleaseOptions {
+  /** major | minor | patch | auto；缺省只建议不修改 */
+  bump?: string;
+  /** 是否在 bump 后创建 git tag */
+  tag?: boolean;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
 export interface ChangelogOptions {
   /** git 区间（v1.0.0.. / ..HEAD / 1.0.0..2.0.0）；默认最近一个 tag 之后 */
   range?: string;
