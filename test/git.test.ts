@@ -3,7 +3,7 @@ import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { getDiff, getLog, assertInGitRepo, GitError, detectBaseBranch, getBranchDiff, getCurrentBranch } from "../src/lib/git.js";
+import { getDiff, getLog, assertInGitRepo, GitError, detectBaseBranch, getBranchDiff, getCurrentBranch, getLatestTag } from "../src/lib/git.js";
 
 let repo: string;
 
@@ -126,5 +126,31 @@ describe("分支助手", () => {
     expect(res.diff.trim()).toBe("");
     expect(res.files).toHaveLength(0);
     expect(res.truncated).toBe(false);
+  });
+
+  it("getLatestTag 无 tag 返回空串", async () => {
+    await expect(getLatestTag(repo)).resolves.toBe("");
+  });
+
+  it("getDiff --all 纳入 untracked 新文件", async () => {
+    await writeFile(path.join(repo, "untracked-xyz.txt"), "const secret = 1;\n");
+    try {
+      const res = await getDiff(repo, { all: true });
+      expect(res.files).toContain("untracked-xyz.txt");
+      expect(res.diff).toContain("new file mode 100644");
+      expect(res.diff).toContain("+const secret = 1;");
+    } finally {
+      await rm(path.join(repo, "untracked-xyz.txt"), { force: true });
+    }
+  });
+
+  it("getDiff staged 模式不含 untracked 文件", async () => {
+    await writeFile(path.join(repo, "untracked-yzx.txt"), "x = 1;\n");
+    try {
+      const res = await getDiff(repo, { staged: true });
+      expect(res.files).not.toContain("untracked-yzx.txt");
+    } finally {
+      await rm(path.join(repo, "untracked-yzx.txt"), { force: true });
+    }
   });
 });

@@ -29,7 +29,7 @@ function runProcess(
 }
 
 /** 硬性跳过的目录名（任意层级） */
-const HARD_SKIP_DIRS = new Set([
+export const HARD_SKIP_DIRS = new Set([
   ".git",
   ".hg",
   ".svn",
@@ -66,7 +66,7 @@ const HARD_SKIP_FILES = new Set([
 ]);
 
 /** 二进制 / 不可读扩展名 */
-const BINARY_EXTS = new Set([
+export const BINARY_EXTS = new Set([
   // images
   "png", "jpg", "jpeg", "gif", "webp", "svg", "ico", "bmp", "tiff", "avif", "heic",
   // media

@@ -36,6 +36,13 @@ export function done(msg: string): void {
   else console.log(`✓ ${msg}`);
 }
 
+/** 警告：JSON 模式静默，TTY 用 clack log.warn，否则走 stderr */
+export function warn(msg: string): void {
+  if (jsonMode) return;
+  if (interactive) log.warn(msg);
+  else console.warn(msg);
+}
+
 /** 失败：JSON 模式输出 {ok:false} 并设 exit code 1 */
 export function fail(msg: string): void {
   if (jsonMode) {

@@ -15,6 +15,7 @@ import {
   isJsonMode,
   emitJson,
   say,
+  warn,
   done,
   fail,
   progress,
@@ -142,7 +143,7 @@ export async function runReadme(options: ReadmeOptions): Promise<void> {
       say(`file tree tokens: ~${estimateTokens(treeText)}`);
       say(`estimated total tokens: ~${budget.estimatedTokens}`);
       say(`budget: ${options.maxTokens} tokens`);
-      if (budget.skippedNote) console.warn(budget.skippedNote);
+      if (budget.skippedNote) warn(budget.skippedNote);
       done("dry-run 完成，未调用 API");
       return;
     }

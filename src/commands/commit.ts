@@ -1,4 +1,4 @@
-import { intro, spinner, confirm, select, log, text } from "@clack/prompts";
+import { intro, spinner, confirm, select, text } from "@clack/prompts";
 import { getDiff, assertInGitRepo } from "../lib/git.js";
 import { chatCompletion, llmConfigFromOptions } from "../lib/llm.js";
 import { buildCommitPrompt } from "../prompts/commit.js";
@@ -8,6 +8,7 @@ import {
   setJsonMode,
   isJsonMode,
   emitJson,
+  warn,
   done,
   fail,
   progress,
@@ -61,8 +62,7 @@ export async function runCommit(options: CommitOptions): Promise<void> {
   }
 
   if (diffResult.truncated) {
-    if (interactive) log.warn("diff 过大已截断，建议分次提交");
-    else console.warn("warning: diff 过大已截断，建议分次提交");
+    warn("diff 过大已截断，建议分次提交");
   }
 
   // 2. 生成（失败自动重试由 llm.ts 内部处理）

@@ -1,5 +1,42 @@
 # repo-ai-cli
 
+## 0.5.0
+
+### Minor Changes
+
+- feat: 新增 ask / fix / release 命令 + 材料收集抽取复用
+
+  - `repo-ai ask <问题>`：针对当前代码库提问（RAG），复用文件收集 + token 预算，支持 `--stream`
+  - `repo-ai fix <bug 描述>`：AI 定位根因并给出结构化修复建议（不改代码）
+  - `repo-ai release`：语义化版本建议（默认只建议、离线幂等）+ `--bump major|minor|patch|auto` + `--tag`
+  - 抽取 `lib/materials.ts`（`collectMaterials` + `buildMaterialsSection`），readme / ask / fix 复用，去重
+  - `lib/version.ts`（`parseSemver`/`computeNext`/`suggestNextVersion`/`bumpPackageVersion`）、`git.ts createTag`
+
+- feat: 新增 secrets / doctor 命令 + 健壮性收敛
+
+  - `repo-ai secrets`：离线扫描硬编码密钥（GitHub/AWS/Slack/Stripe/OpenAI/Google/私钥/通用赋值），按 critical/high/medium 分级、打码输出、CI 退出码
+  - `repo-ai doctor`：Node 版本 / git 仓库 / 持久化配置 / LLM key 四项离线体检
+  - `git.ts getDiff --all` 纳入 untracked 新文件（commit/review --all 不再漏掉新增文件）；新增 `getLatestTag`
+  - `config set` 增加数值范围校验（temperature 0~2、其余正整数）
+  - 清理：移除 `llm.ts` 死代码 catch；`changelog` 复用 `getLatestTag`；`config init` 去重 clack 动态导入
+
+- feat: 新增 test / refactor / hooks 命令 + 告警输出统一
+
+  - `repo-ai test <文件>`：AI 生成单元测试（vitest / jest / node:test），覆盖主要/边界/异常分支
+  - `repo-ai refactor <文件>`：AI 重构建议（all/readability/perf/complexity/types），不改代码
+  - `repo-ai hooks <install|uninstall|list>`：安装 `prepare-commit-msg` 钩子，commit 时自动调用 `repo-ai commit`（覆盖前自动备份）
+  - 新增 `lib/git-hooks.ts`、`prompts/test.ts`、`prompts/refactor.ts`；`git.ts` 新增 `getGitDir`
+  - ui.ts 新增 `warn()`，统一各命令截断告警输出并正确遵循 `--json` 静默
+
+- feat: 新增 gitignore / license / stats / deps / translate 命令
+
+  - `repo-ai gitignore <模板...>`：内置 16 套语言/框架模板（node/python/go/rust/java/nextjs/vue/react/docker/...），离线
+  - `repo-ai license <id>`：内置 6 套开源许可（MIT/ISC/BSD-2/BSD-3/Unlicense/MIT-0），自动注入年份与署名
+  - `repo-ai stats`：仓库统计（文件/LOC/语言分布/提交数/贡献者），离线
+  - `repo-ai deps`：解析 package.json / requirements.txt 依赖清单，离线
+  - `repo-ai translate <文件> --to zh|en|bilingual`：AI 文档中英互译
+  - `git.ts` 新增 `getRepoMeta` / `getGitUserName`
+
 ## 0.4.0
 
 ### Minor Changes

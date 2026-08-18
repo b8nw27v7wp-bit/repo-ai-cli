@@ -1,8 +1,8 @@
 # repo-ai-cli
 
-**AI-powered repository helper CLI: generate bilingual READMEs and conventional commit messages from your codebase.**
+**AI-powered repository helper CLI: 21 commands to generate bilingual READMEs, conventional commits, CHANGELOGs, code reviews, tests, docs, PRs and more — plus offline utilities for secrets, stats, deps, gitignore, LICENSE and git hooks.**
 
-**AI 驱动的仓库工具 CLI：从你的代码库一键生成中英双语 README 和规范的 commit message。**
+**AI 驱动的仓库助手 CLI：21 条命令覆盖仓库全流程 —— 生成双语 README、规范 commit、CHANGELOG、代码审查、单元测试、文档翻译、PR 描述、代码库问答，以及密钥扫描、仓库统计、依赖解析、.gitignore / LICENSE 生成、git 钩子等离线工具。**
 
 [![CI](https://github.com/b8nw27v7wp-bit/repo-ai-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/b8nw27v7wp-bit/repo-ai-cli/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/repo-ai-cli.svg)](https://www.npmjs.com/package/repo-ai-cli)
@@ -43,6 +43,36 @@
 - ⚡ **Streaming Output** — `--stream` streams the LLM output token-by-token during `readme` / `changelog` generation for instant feedback.
   **流式输出** — `readme` / `changelog` 加 `--stream` 边生成边打印，实时反馈。
 
+- 🕵️ **Secret Scanning** — `repo-ai-cli secrets` scans your repo offline for hardcoded credentials (GitHub/AWS/Slack/OpenAI/private keys...) with severity ranking and masked output, CI-friendly exit codes.
+  **密钥扫描** — `repo-ai-cli secrets` 离线扫描仓库中的硬编码密钥（GitHub/AWS/Slack/OpenAI/私钥等），按严重程度分级、打码输出，可接入 CI。
+
+- 🩺 **Health Check** — `repo-ai-cli doctor` diagnoses your environment (Node version, git repo, config, API key) in one command.
+  **环境体检** — `repo-ai-cli doctor` 一键检查 Node 版本、git 仓库、配置与 API key。
+
+- 📄 **Scaffolding Utilities** — `gitignore` (16 bundled language templates), `license` (6 OSS licenses), `stats` (LOC/language/commit stats) and `deps` (dependency listing) — all offline.
+  **脚手架工具集** — `gitignore`（16 套语言模板）、`license`（6 套开源许可）、`stats`（行数/语言/提交统计）、`deps`（依赖清单）—— 全离线。
+
+- 🌐 **Document Translation** — `repo-ai-cli translate` turns docs between Chinese and English (or bilingual) while preserving code blocks and structure.
+  **文档翻译** — `repo-ai-cli translate` 在中文/英文/双语之间翻译文档，保留代码块与结构。
+
+- 🧪 **Test Generation** — `repo-ai-cli test` generates unit tests (Vitest/Jest/node:test) for a file, covering normal/edge/error paths without hallucinating APIs.
+  **测试生成** — `repo-ai-cli test` 为文件生成单元测试（Vitest/Jest/node:test），覆盖正常/边界/异常分支且不编造 API。
+
+- ♻️ **Refactoring Suggestions** — `repo-ai-cli refactor` reviews a file and returns ranked, behavior-preserving refactor suggestions.
+  **重构建议** — `repo-ai-cli refactor` 分析文件并给出按收益排序、不改变行为的重构建议。
+
+- 🪝 **Git Hook Installer** — `repo-ai-cli hooks install` wires up a `prepare-commit-msg` hook so plain `git commit` auto-generates a conventional message.
+  **Git 钩子安装** — `repo-ai-cli hooks install` 一键安装 `prepare-commit-msg` 钩子，`git commit` 自动生成规范 message。
+
+- 💬 **Codebase Q&A (RAG)** — `repo-ai-cli ask "how does X work?"` gathers relevant files and answers against your actual code, citing functions/files.
+  **代码库问答** — `repo-ai-cli ask "X 是怎么实现的？"` 检索相关文件并结合真实代码回答，引用具体函数/文件。
+
+- 🐛 **Bug Diagnosis** — `repo-ai-cli fix "describe the bug"` locates the root cause and returns a structured, non-hallucinated fix suggestion.
+  **Bug 定位** — `repo-ai-cli fix "描述 bug"` 定位根因并给出结构化修复建议，不编造代码。
+
+- 🚀 **Release Helper** — `repo-ai-cli release` suggests the next semver from your commits; `--bump` + `--tag` applies the version bump and tag.
+  **发布助手** — `repo-ai-cli release` 根据提交记录建议下一个版本号，`--bump`+`--tag` 一键改版本并打 tag。
+
 - 🧠 **Smart Token Budgeting** — Three-tier file prioritization and sampling ensure efficient use of your LLM token budget, even for large repositories.
   **智能 Token 预算管理** — 三层文件优先级与采样机制，即使面对大型仓库也能高效利用 LLM Token 预算。
 
@@ -58,8 +88,8 @@
 - 🔑 **BYOK (Bring Your Own Key)** — Use your own API key from 8+ providers (DeepSeek, OpenAI, Kimi, GLM, Qwen, MiniMax, Grok, SiliconFlow) or any OpenAI-compatible endpoint. Zero server-side costs, and your code is only sent to the API you configure.
   **BYOK 自带 API Key** — 支持 DeepSeek、OpenAI、Kimi、GLM、通义千问、MiniMax、Grok、硅基流动等 8+ 家国内外提供商，以及任意 OpenAI 兼容端点。零服务端成本，代码仅发送至你配置的 API。
 
-- 🧪 **Comprehensive Testing** — 117+ unit and end-to-end tests covering file filtering, token budgeting, git integration, LLM error handling (incl. streaming), provider resolution, config persistence, and more.
-  **全面测试覆盖** — 117+ 单元测试与端到端测试，覆盖文件过滤、Token 预算、Git 集成、LLM 错误处理（含流式）、提供商解析、配置持久化等核心逻辑。
+- 🧪 **Comprehensive Testing** — 173+ unit and end-to-end tests covering file filtering, token budgeting, git integration, LLM error handling (incl. streaming), secret scanning, semantic versioning, provider resolution, config persistence, git hooks, and more.
+  **全面测试覆盖** — 173+ 单元测试与端到端测试，覆盖文件过滤、Token 预算、Git 集成、LLM 错误处理（含流式）、密钥扫描、语义化版本、提供商解析、配置持久化、git 钩子等核心逻辑。
 
 ---
 
@@ -241,6 +271,115 @@ repo-ai-cli init my-cli
 repo-ai-cli init my-lib --template ts-lib --force
 ```
 
+### Scan for Secrets — 密钥扫描
+
+```bash
+# Scan the current directory (offline, no LLM)
+repo-ai-cli secrets
+
+# Scan a specific directory, only critical/high findings
+repo-ai-cli secrets /path/to/project --severity high
+
+# Machine-readable (exits 1 if any findings, useful for CI)
+repo-ai-cli secrets --json
+```
+
+### Check Environment Health — 环境体检
+
+```bash
+repo-ai-cli doctor
+
+# Machine-readable
+repo-ai-cli doctor --json
+```
+
+### Repo Utilities — 仓库工具
+
+```bash
+# Generate .gitignore (combine templates); --list to see all
+repo-ai-cli gitignore node python -o .gitignore
+repo-ai-cli gitignore --list
+
+# Generate a LICENSE (auto-injects your name + year)
+repo-ai-cli license mit --name "Yu" --year 2026
+
+# Repo stats: files, lines of code, languages, commits
+repo-ai-cli stats
+
+# List dependencies from package.json / requirements.txt
+repo-ai-cli deps
+```
+
+### Translate Documents — 文档翻译
+
+```bash
+# Translate to English (default), Chinese, or bilingual
+repo-ai-cli translate README.md --to en
+repo-ai-cli translate docs/guide.md --to zh -o docs/guide.zh.md
+
+# Machine-readable
+repo-ai-cli translate README.md --to en --json
+```
+
+### Generate Tests — 生成单元测试
+
+```bash
+# Generate unit tests for a file (Vitest by default)
+repo-ai-cli test src/lib/git.ts
+
+# Choose a framework and write to a file
+repo-ai-cli test src/lib/git.ts --framework jest -o src/lib/__tests__/git.test.ts
+repo-ai-cli test src/lib/git.ts --framework node-test
+```
+
+### Get Refactoring Suggestions — 重构建议
+
+```bash
+# Analyze a file and print suggestions (read-only)
+repo-ai-cli refactor src/lib/git.ts
+
+# Focus on a specific dimension
+repo-ai-cli refactor src/lib/git.ts --focus complexity
+```
+
+### Install Git Hooks — 安装 git 钩子
+
+```bash
+# Install prepare-commit-msg so `git commit` auto-generates messages
+repo-ai-cli hooks install
+
+# Check / remove
+repo-ai-cli hooks list
+repo-ai-cli hooks uninstall
+```
+
+### Ask About Your Code — 代码库问答
+
+```bash
+# Ask a question; repo-ai gathers relevant files and answers with citations
+repo-ai-cli ask "how is the token budget allocated?"
+
+# Stream the answer token-by-token
+repo-ai-cli ask "这个项目的配置优先级是什么" --stream
+```
+
+### Diagnose a Bug — 定位 bug
+
+```bash
+# Locate the root cause and get a structured fix suggestion (read-only)
+repo-ai-cli fix "commit 命令在非 git 目录下报错"
+```
+
+### Release — 版本发布
+
+```bash
+# Suggest the next version from your commit history (no changes)
+repo-ai-cli release
+
+# Apply the bump and create a git tag
+repo-ai-cli release --bump minor --tag
+```
+
 ### Script-friendly JSON output — 脚本友好的 JSON 输出
 
 所有命令支持 `--json`，输出机器可读结果，便于接入 CI/脚本：
@@ -395,6 +534,133 @@ repo-ai-cli init my-cli --json
 
 *交互式（TTY）下未指定 `--template` / `[name]` 时会弹出模板选择与项目名提示。*
 
+#### `repo-ai-cli secrets`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `[path]` | Directory to scan | `.` (current directory) |
+| `--severity <level>` | Only report `critical` / `high` / `medium` and above | `medium` |
+| `--max-file-kb <n>` | Max file size to scan (in KB) | `200` |
+| `--json` | Output machine-readable JSON | `false` |
+
+#### `repo-ai-cli doctor`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--json` | Output machine-readable JSON | `false` |
+
+#### `repo-ai-cli gitignore`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `[templates...]` | Template ids to combine (see `--list`) | required |
+| `--list` | List available templates | `false` |
+| `-o, --output <file>` | Write to file (default: stdout) | stdout |
+| `--json` | Output machine-readable JSON | `false` |
+
+#### `repo-ai-cli license`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `[license]` | `mit` \| `isc` \| `bsd-2-clause` \| `bsd-3-clause` \| `unlicense` \| `mit-0` | `mit` |
+| `--name <name>` | Copyright holder | git `user.name` |
+| `--year <year>` | Copyright year | current year |
+| `-o, --output <file>` | Output file | `LICENSE` |
+| `--json` | Output machine-readable JSON | `false` |
+
+#### `repo-ai-cli stats`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `[path]` | Directory to analyze | `.` (current directory) |
+| `--json` | Output machine-readable JSON | `false` |
+
+#### `repo-ai-cli deps`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--json` | Output machine-readable JSON | `false` |
+
+#### `repo-ai-cli translate`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `<file>` | Document to translate | required |
+| `--to <lang>` | `zh` \| `en` \| `bilingual` | `en` |
+| `-o, --output <file>` | Write to file (default: stdout) | stdout |
+| `--max-file-kb <n>` | Max file size to read (in KB) | `200` |
+| `--json` | Output machine-readable JSON | `false` |
+| `--provider <id>` | LLM provider (same as `readme`) | auto-detect |
+| `--base-url <url>` | Custom OpenAI-compatible endpoint | provider default |
+| `--model <name>` | Model name override | provider default |
+
+#### `repo-ai-cli test`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `<file>` | Source file to generate tests for | required |
+| `--framework <name>` | `vitest` \| `jest` \| `node-test` | `vitest` |
+| `-o, --output <file>` | Write tests to file (default: stdout) | stdout |
+| `--max-file-kb <n>` | Max file size to read (in KB) | `200` |
+| `--json` | Output machine-readable JSON | `false` |
+| `--provider <id>` | LLM provider (same as `readme`) | auto-detect |
+| `--base-url <url>` | Custom OpenAI-compatible endpoint | provider default |
+| `--model <name>` | Model name override | provider default |
+
+#### `repo-ai-cli refactor`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `<file>` | File to analyze | required |
+| `--focus <dim>` | `all` \| `readability` \| `perf` \| `complexity` \| `types` | `all` |
+| `-o, --output <file>` | Write suggestions to file (default: stdout) | stdout |
+| `--max-file-kb <n>` | Max file size to read (in KB) | `200` |
+| `--json` | Output machine-readable JSON | `false` |
+| `--provider <id>` | LLM provider (same as `readme`) | auto-detect |
+| `--base-url <url>` | Custom OpenAI-compatible endpoint | provider default |
+| `--model <name>` | Model name override | provider default |
+
+#### `repo-ai-cli hooks`
+
+| Command | Description |
+|---------|-------------|
+| `hooks install [--hook <name>]` | Install a git hook (default `prepare-commit-msg`) |
+| `hooks uninstall [--hook <name>]` | Remove the hook installed by repo-ai |
+| `hooks list` | Show installed hook status |
+
+#### `repo-ai-cli ask`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `<question...>` | Your question about the repository | required |
+| `--max-tokens <n>` | Token budget for collected files | `48000` |
+| `--max-file-kb <n>` | Max single-file size (in KB) | `100` |
+| `--stream` | Stream the answer token-by-token (TTY only) | `false` |
+| `--json` | Output machine-readable JSON | `false` |
+| `--provider <id>` | LLM provider (same as `readme`) | auto-detect |
+| `--base-url <url>` | Custom OpenAI-compatible endpoint | provider default |
+| `--model <name>` | Model name override | provider default |
+
+#### `repo-ai-cli fix`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `<description...>` | Bug description / error message | required |
+| `--max-tokens <n>` | Token budget for collected files | `48000` |
+| `--max-file-kb <n>` | Max single-file size (in KB) | `100` |
+| `--json` | Output machine-readable JSON | `false` |
+| `--provider <id>` | LLM provider (same as `readme`) | auto-detect |
+| `--base-url <url>` | Custom OpenAI-compatible endpoint | provider default |
+| `--model <name>` | Model name override | provider default |
+
+#### `repo-ai-cli release`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--bump <level>` | `major` \| `minor` \| `patch` \| `auto`（给出则实际修改版本） | suggest only |
+| `--tag` | Create a git tag after `--bump` | `false` |
+| `--json` | Output machine-readable JSON | `false` |
+
 #### `repo-ai-cli config`
 
 | Command | Description |
@@ -446,24 +712,52 @@ repo-ai-cli/
 │   │   ├── explain.ts           # `repo-ai explain` command (explain code)
 │   │   ├── pr.ts                # `repo-ai pr` command (PR description)
 │   │   ├── init.ts              # `repo-ai init` command (scaffolding)
+│   │   ├── secrets.ts           # `repo-ai secrets` command (secret scan)
+│   │   ├── doctor.ts            # `repo-ai doctor` command (health check)
+│   │   ├── gitignore.ts         # `repo-ai gitignore` command (templates)
+│   │   ├── license.ts           # `repo-ai license` command (OSS licenses)
+│   │   ├── stats.ts             # `repo-ai stats` command (repo statistics)
+│   │   ├── deps.ts              # `repo-ai deps` command (dependency listing)
+│   │   ├── translate.ts         # `repo-ai translate` command (doc translation)
+│   │   ├── test.ts              # `repo-ai test` command (unit test generation)
+│   │   ├── refactor.ts          # `repo-ai refactor` command (refactor suggestions)
+│   │   ├── hooks.ts             # `repo-ai hooks` command (git hook installer)
+│   │   ├── ask.ts               # `repo-ai ask` command (codebase Q&A)
+│   │   ├── fix.ts               # `repo-ai fix` command (bug diagnosis)
+│   │   ├── release.ts           # `repo-ai release` command (versioning)
 │   │   └── config.ts            # `repo-ai config` command group
 │   ├── lib/
 │   │   ├── collect-files.ts     # File collection & filtering (token control core)
 │   │   ├── file-tree.ts         # Text-based directory tree generation
 │   │   ├── git.ts               # Git diff / staged status reading
 │   │   ├── github.ts            # GitHub URL parsing & shallow cloning
-│   │   ├── llm.ts               # DeepSeek API calls (retry + timeout)
+│   │   ├── llm.ts               # LLM API calls (retry + timeout + streaming)
 │   │   ├── output.ts            # Atomic file writing
 │   │   ├── token-budget.ts      # Token budget allocation & estimation
 │   │   ├── templates.ts         # init scaffolding templates (ts-cli / ts-lib)
-│   │   └── ui.ts                # Shared UI helpers (spinner / json / say)
+│   │   ├── secret-patterns.ts   # Secret detection patterns (offline scan)
+│   │   ├── scan-secrets.ts      # Directory secret scanner
+│   │   ├── doctor.ts            # Environment / repo health checks
+│   │   ├── gitignore-templates.ts # .gitignore bundled templates
+│   │   ├── licenses.ts          # OSS license templates
+│   │   ├── stats.ts             # Repo statistics (LOC / language / git)
+│   │   ├── deps.ts              # Dependency manifest parsing
+│   │   ├── git-hooks.ts         # Git hook install / uninstall / list
+│   │   ├── materials.ts         # File collection + budget (readme/ask/fix shared)
+│   │   ├── version.ts           # Semantic versioning (suggest / bump)
+│   │   └── ui.ts                # Shared UI helpers (spinner / json / say / warn)
 │   ├── prompts/
 │   │   ├── readme.ts            # README generation prompt template
 │   │   ├── commit.ts            # Commit message generation prompt template
 │   │   ├── changelog.ts         # CHANGELOG generation prompt template
 │   │   ├── review.ts            # Code review prompt template
 │   │   ├── explain.ts           # Code explanation prompt template
-│   │   └── pr.ts                # PR title/description prompt template
+│   │   ├── pr.ts                # PR title/description prompt template
+│   │   ├── translate.ts         # Document translation prompt template
+│   │   ├── test.ts              # Unit test generation prompt template
+│   │   ├── refactor.ts          # Refactoring suggestions prompt template
+│   │   ├── ask.ts               # Codebase Q&A prompt template
+│   │   └── fix.ts               # Bug diagnosis prompt template
 │   ├── index.ts                 # CLI entry point (commander)
 │   └── types.ts                 # Shared type definitions
 ├── test/                        # Vitest test files

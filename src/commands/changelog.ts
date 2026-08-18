@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { intro } from "@clack/prompts";
-import { getLog, type CommitEntry } from "../lib/git.js";
+import { getLog, getLatestTag, type CommitEntry } from "../lib/git.js";
 import { chatCompletion, streamChatCompletion, llmConfigFromOptions } from "../lib/llm.js";
 import { buildChangelogPrompt } from "../prompts/changelog.js";
 import { writeOutput } from "../lib/output.js";
@@ -20,22 +20,8 @@ import type { ChangelogOptions } from "../types.js";
 
 /** 取最近一个 tag 作为默认区间起点（无 tag 则回退最近 N 条） */
 async function defaultRange(cwd: string): Promise<{ range?: string; label: string }> {
-  try {
-    const { spawn } = await import("node:child_process");
-    const tag = await new Promise<string>((resolve) => {
-      const child = spawn("git", ["describe", "--tags", "--abbrev=0"], {
-        cwd,
-        windowsHide: true,
-      });
-      let out = "";
-      child.stdout.on("data", (d: Buffer) => (out += d.toString()));
-      child.on("error", () => resolve(""));
-      child.on("close", (code) => resolve(code === 0 ? out.trim() : ""));
-    });
-    if (tag) return { range: `${tag}..`, label: `${tag} 之后` };
-  } catch {
-    /* 无 tag 或非 git 仓库，回退 */
-  }
+  const tag = await getLatestTag(cwd);
+  if (tag) return { range: `${tag}..`, label: `${tag} 之后` };
   return { range: undefined, label: "最近 50 条" };
 }
 

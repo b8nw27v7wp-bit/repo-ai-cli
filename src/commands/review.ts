@@ -1,4 +1,4 @@
-import { intro, log } from "@clack/prompts";
+import { intro } from "@clack/prompts";
 import { getDiff, assertInGitRepo } from "../lib/git.js";
 import { chatCompletion, llmConfigFromOptions } from "../lib/llm.js";
 import {
@@ -13,6 +13,7 @@ import {
   setJsonMode,
   isJsonMode,
   emitJson,
+  warn,
   done,
   fail,
   progress,
@@ -59,8 +60,7 @@ export async function runReview(options: ReviewOptions): Promise<void> {
   }
 
   if (diffResult.truncated) {
-    if (interactive) log.warn("diff 过大已截断，审查可能不完整");
-    else console.warn("warning: diff 过大已截断，审查可能不完整");
+    warn("diff 过大已截断，审查可能不完整");
   }
 
   const focus = REVIEW_FOCUSES.includes(options.focus as ReviewFocus)

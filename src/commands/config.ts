@@ -11,6 +11,31 @@ import { findProvider, PROVIDERS } from "../lib/providers.js";
 
 const interactive = Boolean(process.stdout.isTTY);
 
+/** 数值配置项的取值范围校验规则 */
+const NUMERIC_RULES: Record<
+  string,
+  { min: number; max?: number; int?: boolean }
+> = {
+  temperature: { min: 0, max: 2 },
+  maxTokens: { min: 1, int: true },
+  maxOutputTokens: { min: 1, int: true },
+  maxFileKb: { min: 1, int: true },
+  maxDiffKb: { min: 1, int: true },
+};
+
+/** 校验数值配置项；合法返回 null，非法返回错误文案 */
+export function validateNumericValue(key: string, value: string): string | null {
+  const rule = NUMERIC_RULES[key];
+  if (!rule) return null;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return `${key} 需要数字，收到: ${value}`;
+  if (n < rule.min || (rule.max !== undefined && n > rule.max)) {
+    return `${key} 超出范围 ${rule.min}${rule.max !== undefined ? `~${rule.max}` : " 及以上"}，收到: ${value}`;
+  }
+  if (rule.int && !Number.isInteger(n)) return `${key} 需要整数，收到: ${value}`;
+  return null;
+}
+
 function done(msg: string): void {
   console.log(`✓ ${msg}`);
 }
@@ -65,9 +90,8 @@ export async function runConfigSet(
 
   let parsed: string | number = value;
   if (meta.type === "number") {
-    const n = Number(value);
-    if (!Number.isFinite(n)) {
-      const err = `${key} 需要数字，收到: ${value}`;
+    const err = validateNumericValue(key, value);
+    if (err) {
       if (opts.json) {
         console.log(JSON.stringify({ ok: false, error: err }));
         process.exitCode = 1;
@@ -76,7 +100,7 @@ export async function runConfigSet(
       fail(err);
       return;
     }
-    parsed = n;
+    parsed = Number(value);
   }
 
   await saveConfig({ [key]: parsed } as Partial<RepoAIConfig>);
@@ -155,8 +179,7 @@ export async function runConfigInit(): Promise<void> {
     );
     return;
   }
-  const { select, text, isCancel } = await import("@clack/prompts");
-  const { intro, outro } = await import("@clack/prompts");
+  const { select, text, isCancel, intro, outro } = await import("@clack/prompts");
   intro("repo-ai config init");
 
   const provider = (await select({

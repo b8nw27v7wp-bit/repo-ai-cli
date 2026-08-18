@@ -1,4 +1,6 @@
 import { spawn } from "node:child_process";
+import { promises as fs } from "node:fs";
+import path from "node:path";
 
 export interface DiffResult {
   /** diff 内容（可能已截断） */
@@ -155,7 +157,21 @@ export async function getDiff(
   if (all) args.push("HEAD");
   args.push(...DIFF_PATHSPEC);
 
-  return runDiff(args, cwd, maxBytes);
+  const result = await runDiff(args, cwd, maxBytes);
+
+  // --all：git diff HEAD 不含 untracked 新文件，这里补上（以 new file 风格呈现）
+  if (all) {
+    const untracked = await buildUntrackedDiff(cwd, maxBytes);
+    if (untracked.files.length > 0) {
+      const merged = result.diff.trim()
+        ? `${result.diff}\n${untracked.text}`
+        : untracked.text;
+      result.diff = merged;
+      result.files = [...new Set([...result.files, ...untracked.files])];
+      result.totalBytes = Buffer.byteLength(merged, "utf8");
+    }
+  }
+  return result;
 }
 
 const DIFF_PATHSPEC = [
@@ -165,6 +181,54 @@ const DIFF_PATHSPEC = [
   ":(exclude)pnpm-lock.yaml",
   ":(exclude)yarn.lock",
 ];
+
+/** 列出 untracked 文件（相对路径，.gitignore 生效） */
+async function getUntrackedFiles(cwd: string): Promise<string[]> {
+  try {
+    const out = await runGit(["ls-files", "--others", "--exclude-standard"], cwd);
+    return out.split("\n").map((s) => s.trim()).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+/** 把 untracked 文本文件拼成 "new file" 风格 diff 片段（受 maxBytes 约束） */
+async function buildUntrackedDiff(
+  cwd: string,
+  maxBytes: number,
+): Promise<{ text: string; files: string[] }> {
+  const paths = await getUntrackedFiles(cwd);
+  const chunks: string[] = [];
+  const files: string[] = [];
+  let budget = maxBytes;
+
+  for (const rel of paths) {
+    if (budget <= 0) break;
+    let content: string;
+    try {
+      const buf = await fs.readFile(path.join(cwd, rel));
+      if (buf.includes(0)) continue; // 二进制
+      content = buf.toString("utf8");
+    } catch {
+      continue;
+    }
+    let keep = content;
+    if (Buffer.byteLength(keep, "utf8") > budget) {
+      keep = Buffer.from(keep, "utf8").subarray(0, budget).toString("utf8");
+    }
+    const lines = keep.split("\n");
+    chunks.push(`diff --git a/${rel} b/${rel}`);
+    chunks.push("new file mode 100644");
+    chunks.push("--- /dev/null");
+    chunks.push(`+++ b/${rel}`);
+    chunks.push(`@@ -0,0 +1,${lines.length} @@`);
+    for (const l of lines) chunks.push(`+${l}`);
+    files.push(rel);
+    budget -= Buffer.byteLength(keep, "utf8");
+  }
+
+  return { text: chunks.join("\n"), files };
+}
 
 /** 通用 diff 执行 + 文件解析 + 截断 */
 async function runDiff(
@@ -253,4 +317,69 @@ export async function getCurrentBranch(cwd: string): Promise<string> {
   await assertInGitRepo(cwd);
   const out = await runGit(["rev-parse", "--abbrev-ref", "HEAD"], cwd);
   return out.trim();
+}
+
+/** 最近的 tag 名（无 tag 返回空字符串） */
+export async function getLatestTag(cwd: string): Promise<string> {
+  try {
+    const out = await runGit(["describe", "--tags", "--abbrev=0"], cwd);
+    return out.trim();
+  } catch {
+    return "";
+  }
+}
+
+export interface RepoMeta {
+  commitCount: number;
+  authorCount: number;
+  firstCommitDate?: string;
+  lastCommitDate?: string;
+}
+
+/** 仓库元信息：提交数 / 贡献者数 / 首次与最近提交日期。失败时返回 0 值对象。 */
+export async function getRepoMeta(cwd: string): Promise<RepoMeta> {
+  try {
+    const count = Number((await runGit(["rev-list", "--count", "HEAD"], cwd)).trim());
+    const authors = await runGit(["shortlog", "-sn", "HEAD"], cwd);
+    const authorCount = authors.split("\n").filter(Boolean).length;
+    const last = (await runGit(["log", "-1", "--format=%ad", "--date=short"], cwd)).trim();
+    const first = (
+      await runGit(["log", "--reverse", "--format=%ad", "--date=short", "-1"], cwd)
+    ).trim();
+    return {
+      commitCount: Number.isFinite(count) ? count : 0,
+      authorCount,
+      firstCommitDate: first || undefined,
+      lastCommitDate: last || undefined,
+    };
+  } catch {
+    return { commitCount: 0, authorCount: 0 };
+  }
+}
+
+/** 读取 git 配置的 user.name（无配置返回空串） */
+export async function getGitUserName(cwd: string): Promise<string> {
+  try {
+    const out = await runGit(["config", "user.name"], cwd);
+    return out.trim();
+  } catch {
+    return "";
+  }
+}
+
+/** git 目录绝对路径（.git，兼容 worktree/submodule） */
+export async function getGitDir(cwd: string): Promise<string> {
+  await assertInGitRepo(cwd);
+  const out = await runGit(["rev-parse", "--absolute-git-dir"], cwd);
+  return out.trim();
+}
+
+/** 创建带注释的 tag（release 用） */
+export async function createTag(
+  cwd: string,
+  tag: string,
+  message: string,
+): Promise<void> {
+  await assertInGitRepo(cwd);
+  await runGit(["tag", "-a", tag, "-m", message], cwd);
 }
