@@ -54,6 +54,8 @@ export interface ReadmeOptions {
   temperature?: number;
   /** JSON 输出（脚本友好） */
   json?: boolean;
+  /** 流式输出（TTY 下边生成边打印） */
+  stream?: boolean;
 }
 
 export interface CommitOptions {
@@ -70,6 +72,72 @@ export interface CommitOptions {
   maxOutputTokens?: number;
   /** 采样温度 */
   temperature?: number;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface ReviewOptions {
+  /** 使用暂存区改动（默认 staged） */
+  staged?: boolean;
+  /** 包含未暂存改动 */
+  all?: boolean;
+  /** 审查维度：all | bugs | security | style | perf（默认 all） */
+  focus?: string;
+  /** 输出文件（默认打印到 stdout） */
+  output?: string;
+  /** diff 截断上限（KB） */
+  maxDiffKb?: number;
+  provider?: string;
+  baseUrl?: string;
+  model?: string;
+  apiKey?: string;
+  maxOutputTokens?: number;
+  temperature?: number;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface ExplainOptions {
+  /** 文件路径，可带 :行号 或 :起-止（如 src/lib/git.ts:38） */
+  target: string;
+  /** 输出语言：zh | en | bilingual */
+  language: "zh" | "en" | "bilingual";
+  /** 单文件读取上限（KB） */
+  maxFileKb?: number;
+  provider?: string;
+  baseUrl?: string;
+  model?: string;
+  apiKey?: string;
+  maxOutputTokens?: number;
+  temperature?: number;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface PrOptions {
+  /** base 分支（默认自动检测 origin/HEAD → main → master） */
+  base?: string;
+  /** diff 截断上限（KB） */
+  maxDiffKb?: number;
+  /** 生成后用 gh pr create 直接创建 PR（非 JSON 模式） */
+  create?: boolean;
+  provider?: string;
+  baseUrl?: string;
+  model?: string;
+  apiKey?: string;
+  maxOutputTokens?: number;
+  temperature?: number;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface InitOptions {
+  /** 项目名（可选；缺省用当前目录名） */
+  name?: string;
+  /** 模板 id：ts-cli | ts-lib */
+  template?: string;
+  /** 覆盖已存在的文件 */
+  force?: boolean;
   /** JSON 输出（脚本友好） */
   json?: boolean;
 }
@@ -93,6 +161,8 @@ export interface ChangelogOptions {
   apiKey?: string;
   maxOutputTokens?: number;
   temperature?: number;
+  /** 流式输出（TTY 下边生成边打印） */
+  stream?: boolean;
   /** JSON 输出（脚本友好） */
   json?: boolean;
 }

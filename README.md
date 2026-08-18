@@ -28,6 +28,21 @@
 - ⚙️ **Persistent Config** — Save your provider, API key and defaults once with `repo-ai-cli config set`, no more env vars every time.
   **配置持久化** — 用 `repo-ai-cli config set` 一次保存提供商、API key 与默认参数，无需每次设置环境变量。
 
+- 🔍 **AI Code Review** — Review your git diff with a single command, getting a severity-ranked (Critical/Major/Minor/Nit) report with fix suggestions, optionally scoped to bugs/security/style/perf.
+  **AI 代码审查** — 用 `repo-ai-cli review` 一键审查你的 git diff，输出按严重程度分级的问题报告与修复建议，可聚焦 bug/安全/风格/性能。
+
+- 💡 **Explain Code** — Point at a file (or a `file:line` region) and get a plain-language walkthrough of what it does and why.
+  **代码解释** — 用 `repo-ai-cli explain src/lib/git.ts:38` 快速理解一段陌生代码的作用与逻辑。
+
+- 🔀 **PR Description** — Generate a conventional PR title + markdown body from your branch diff against the base branch.
+  **PR 描述生成** — 用 `repo-ai-cli pr` 根据当前分支与 base 的差异生成规范的 PR 标题与描述。
+
+- 🏗️ **Project Scaffolding** — `repo-ai-cli init` scaffolds a ready-to-build TypeScript CLI or library (tsup + vitest), no LLM required.
+  **项目脚手架** — `repo-ai-cli init` 一键生成可构建的 TypeScript CLI / 库项目骨架。
+
+- ⚡ **Streaming Output** — `--stream` streams the LLM output token-by-token during `readme` / `changelog` generation for instant feedback.
+  **流式输出** — `readme` / `changelog` 加 `--stream` 边生成边打印，实时反馈。
+
 - 🧠 **Smart Token Budgeting** — Three-tier file prioritization and sampling ensure efficient use of your LLM token budget, even for large repositories.
   **智能 Token 预算管理** — 三层文件优先级与采样机制，即使面对大型仓库也能高效利用 LLM Token 预算。
 
@@ -43,8 +58,8 @@
 - 🔑 **BYOK (Bring Your Own Key)** — Use your own API key from 8+ providers (DeepSeek, OpenAI, Kimi, GLM, Qwen, MiniMax, Grok, SiliconFlow) or any OpenAI-compatible endpoint. Zero server-side costs, and your code is only sent to the API you configure.
   **BYOK 自带 API Key** — 支持 DeepSeek、OpenAI、Kimi、GLM、通义千问、MiniMax、Grok、硅基流动等 8+ 家国内外提供商，以及任意 OpenAI 兼容端点。零服务端成本，代码仅发送至你配置的 API。
 
-- 🧪 **Comprehensive Testing** — 88+ unit and end-to-end tests covering file filtering, token budgeting, git integration, LLM error handling, provider resolution, config persistence, and more.
-  **全面测试覆盖** — 88+ 单元测试与端到端测试，覆盖文件过滤、Token 预算、Git 集成、LLM 错误处理、提供商解析、配置持久化等核心逻辑。
+- 🧪 **Comprehensive Testing** — 117+ unit and end-to-end tests covering file filtering, token budgeting, git integration, LLM error handling (incl. streaming), provider resolution, config persistence, and more.
+  **全面测试覆盖** — 117+ 单元测试与端到端测试，覆盖文件过滤、Token 预算、Git 集成、LLM 错误处理（含流式）、提供商解析、配置持久化等核心逻辑。
 
 ---
 
@@ -162,6 +177,70 @@ repo-ai-cli changelog --print
 repo-ai-cli changelog -l en
 ```
 
+### Review Your Code — 代码审查
+
+```bash
+# Review staged changes (default), print report to stdout
+repo-ai-cli review
+
+# Include unstaged changes
+repo-ai-cli review --all
+
+# Focus on a specific dimension
+repo-ai-cli review --focus bugs
+repo-ai-cli review --focus security
+
+# Write the report to a file
+repo-ai-cli review -o REVIEW.md
+```
+
+### Explain Code — 解释代码
+
+```bash
+# Explain a whole file
+repo-ai-cli explain src/lib/git.ts
+
+# Explain a specific region (line 38, or lines 10-40)
+repo-ai-cli explain src/lib/git.ts:38
+repo-ai-cli explain src/lib/git.ts:10-40
+
+# Explain a certain function/symbol
+repo-ai-cli explain src/lib/git.ts#getDiff
+
+# Output language
+repo-ai-cli explain src/lib/git.ts -l en
+```
+
+### Generate a PR Description — 生成 PR 描述
+
+```bash
+# Auto-detect base branch (origin/HEAD → main → master)
+repo-ai-cli pr
+
+# Explicit base branch
+repo-ai-cli pr --base main
+repo-ai-cli pr --base origin/main
+
+# Create the PR directly via the GitHub CLI (gh)
+repo-ai-cli pr --create
+
+# Machine-readable
+repo-ai-cli pr --json
+```
+
+### Scaffold a New Project — 脚手架新项目
+
+```bash
+# In the current directory (TypeScript CLI template)
+repo-ai-cli init
+
+# Create a new directory with a name
+repo-ai-cli init my-cli
+
+# Pick a template (ts-cli | ts-lib) and overwrite existing files
+repo-ai-cli init my-lib --template ts-lib --force
+```
+
 ### Script-friendly JSON output — 脚本友好的 JSON 输出
 
 所有命令支持 `--json`，输出机器可读结果，便于接入 CI/脚本：
@@ -175,6 +254,18 @@ repo-ai-cli commit --json
 
 repo-ai-cli changelog --json
 # {"ok":true,"output":"E:\\repo-ai\\CHANGELOG.md","bytes":1234}
+
+repo-ai-cli review --json
+# {"ok":true,"review":"## 🔴 Critical\n...","files":["src/lib/ui.ts"],"truncated":false}
+
+repo-ai-cli explain src/lib/git.ts --json
+# {"ok":true,"file":"src/lib/git.ts","focus":null,"explanation":"..."}
+
+repo-ai-cli pr --json
+# {"ok":true,"base":"main","branch":"feat/x","title":"feat: ...","body":"..."}
+
+repo-ai-cli init my-cli --json
+# {"ok":true,"template":"ts-cli","directory":".../my-cli","created":["package.json",...]}
 ```
 
 ---
@@ -211,6 +302,7 @@ repo-ai-cli changelog --json
 | `--dry-run` | Print statistics only, do not call the API | `false` |
 | `--max-tokens <n>` | Token budget for the LLM call | `48000` |
 | `--max-file-kb <n>` | Maximum single-file size to include (in KB) | `100` |
+| `--stream` | Stream output token-by-token (TTY only) | `false` |
 | `--provider <id>` | LLM provider: `deepseek` \| `openai` \| `moonshot` \| `zhipu` \| `qwen` \| `minimax` \| `xai` \| `siliconflow` | auto-detect |
 | `--base-url <url>` | Custom OpenAI-compatible endpoint | provider default |
 | `--model <name>` | Model name override | provider default |
@@ -243,9 +335,65 @@ repo-ai-cli changelog --json
 | `--json` | Output machine-readable JSON | `false` |
 | `--max-output-tokens <n>` | Max LLM output tokens | `4096` |
 | `--temperature <n>` | Sampling temperature 0~2 | `0.5` |
+| `--stream` | Stream output token-by-token (TTY only) | `false` |
 | `--provider <id>` | LLM provider (same as `readme`) | auto-detect |
 | `--base-url <url>` | Custom OpenAI-compatible endpoint | provider default |
 | `--model <name>` | Model name override | provider default |
+
+#### `repo-ai-cli review`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--staged` | Use staged changes (git diff --cached) | `true` |
+| `--all` | Include unstaged changes (git diff HEAD) | `false` |
+| `-o, --output <file>` | Write review to file (default: stdout) | stdout |
+| `--focus <area>` | Review focus: `all` \| `bugs` \| `security` \| `style` \| `perf` | `all` |
+| `--json` | Output machine-readable JSON | `false` |
+| `--max-diff-kb <n>` | Maximum diff size to process (in KB) | `200` |
+| `--max-output-tokens <n>` | Max LLM output tokens | `4096` |
+| `--temperature <n>` | Sampling temperature 0~2 | `0.3` |
+| `--provider <id>` | LLM provider (same as `readme`) | auto-detect |
+| `--base-url <url>` | Custom OpenAI-compatible endpoint | provider default |
+| `--model <name>` | Model name override | provider default |
+
+#### `repo-ai-cli explain`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `<file-or-region>` | File path, optionally `:line` / `:start-end` / `#symbol` | required |
+| `-l, --language <lang>` | `zh` \| `en` \| `bilingual` | `zh` |
+| `--max-file-kb <n>` | Max file size to read (in KB) | `200` |
+| `--json` | Output machine-readable JSON | `false` |
+| `--max-output-tokens <n>` | Max LLM output tokens | `2048` |
+| `--temperature <n>` | Sampling temperature 0~2 | `0.3` |
+| `--provider <id>` | LLM provider (same as `readme`) | auto-detect |
+| `--base-url <url>` | Custom OpenAI-compatible endpoint | provider default |
+| `--model <name>` | Model name override | provider default |
+
+#### `repo-ai-cli pr`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--base <branch>` | Base branch | auto-detect (origin/HEAD→main→master) |
+| `--create` | Create the PR via `gh pr create` after generating | `false` |
+| `--json` | Output machine-readable JSON | `false` |
+| `--max-diff-kb <n>` | Maximum diff size to process (in KB) | `200` |
+| `--max-output-tokens <n>` | Max LLM output tokens | `4096` |
+| `--temperature <n>` | Sampling temperature 0~2 | `0.5` |
+| `--provider <id>` | LLM provider (same as `readme`) | auto-detect |
+| `--base-url <url>` | Custom OpenAI-compatible endpoint | provider default |
+| `--model <name>` | Model name override | provider default |
+
+#### `repo-ai-cli init`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `[name]` | Project name (default: current directory) | current dir |
+| `-t, --template <id>` | `ts-cli` \| `ts-lib` | `ts-cli` |
+| `-f, --force` | Overwrite existing files | `false` |
+| `--json` | Output machine-readable JSON | `false` |
+
+*交互式（TTY）下未指定 `--template` / `[name]` 时会弹出模板选择与项目名提示。*
 
 #### `repo-ai-cli config`
 
@@ -292,7 +440,13 @@ repo-ai-cli/
 ├── src/
 │   ├── commands/
 │   │   ├── readme.ts            # `repo-ai readme` command
-│   │   └── commit.ts            # `repo-ai commit` command
+│   │   ├── commit.ts            # `repo-ai commit` command
+│   │   ├── changelog.ts         # `repo-ai changelog` command
+│   │   ├── review.ts            # `repo-ai review` command (code review)
+│   │   ├── explain.ts           # `repo-ai explain` command (explain code)
+│   │   ├── pr.ts                # `repo-ai pr` command (PR description)
+│   │   ├── init.ts              # `repo-ai init` command (scaffolding)
+│   │   └── config.ts            # `repo-ai config` command group
 │   ├── lib/
 │   │   ├── collect-files.ts     # File collection & filtering (token control core)
 │   │   ├── file-tree.ts         # Text-based directory tree generation
@@ -300,10 +454,16 @@ repo-ai-cli/
 │   │   ├── github.ts            # GitHub URL parsing & shallow cloning
 │   │   ├── llm.ts               # DeepSeek API calls (retry + timeout)
 │   │   ├── output.ts            # Atomic file writing
-│   │   └── token-budget.ts      # Token budget allocation & estimation
+│   │   ├── token-budget.ts      # Token budget allocation & estimation
+│   │   ├── templates.ts         # init scaffolding templates (ts-cli / ts-lib)
+│   │   └── ui.ts                # Shared UI helpers (spinner / json / say)
 │   ├── prompts/
 │   │   ├── readme.ts            # README generation prompt template
-│   │   └── commit.ts            # Commit message generation prompt template
+│   │   ├── commit.ts            # Commit message generation prompt template
+│   │   ├── changelog.ts         # CHANGELOG generation prompt template
+│   │   ├── review.ts            # Code review prompt template
+│   │   ├── explain.ts           # Code explanation prompt template
+│   │   └── pr.ts                # PR title/description prompt template
 │   ├── index.ts                 # CLI entry point (commander)
 │   └── types.ts                 # Shared type definitions
 ├── test/                        # Vitest test files

@@ -263,6 +263,25 @@ jobs:
 - [x] `config.ts writeConfigAtomic()`：saveConfig/unsetConfig 重复的 tmp+rename 原子写入提取（unset 也补上 0600 权限）
 - [x] 测试 88 全绿，tsc/eslint/build 干净；--help 各命令 LLM options 齐全，--json 输出无噪音
 
+### M8 — `repo-ai review` 代码审查命令
+- [x] `prompts/review.ts`：审查 prompt（按严重程度分级 + `--focus` 五维度）
+- [x] `commands/review.ts`：读 git diff（复用 git.ts）→ 生成 → stdout/写文件/--json
+- [x] `types.ts ReviewOptions` + `index.ts` 注册（复用 withLLMOptions）
+- [x] `test/review-prompt.test.ts`：prompt 组装 + focus 规则测试
+- [x] changeset 记录 `minor` 变更
+- **验收**：`repo-ai review` 对暂存改动输出分级报告；`--focus security` 聚焦安全；`--json` 输出结构化
+
+### M9 — explain / pr / init 命令 + 流式输出
+- [x] `lib/llm.ts` 新增 `streamChatCompletion`（SSE 解析、onToken 回调），提取共享 `buildRequest`
+- [x] readme / changelog 接入 `--stream`（TTY 下边生成边打印）
+- [x] `prompts/explain.ts` + `commands/explain.ts`：`explain <文件[:行号]>` 解释代码（聚焦窗口 + 行号）
+- [x] `prompts/pr.ts`（`parsePrResult` JSON/文本回退）+ `commands/pr.ts`：`pr` 生成 PR 标题+描述
+- [x] `lib/git.ts` 新增 `detectBaseBranch` / `getBranchDiff` / `getCurrentBranch`，提取 `runDiff`
+- [x] `lib/templates.ts` + `commands/init.ts`：`init` 脚手架（ts-cli / ts-lib，纯本地）
+- [x] 测试 88 → 117（stream/explain/pr/templates/branch helpers）
+- [x] `explain` 支持 `file#symbol` 符号聚焦；`pr` 支持 `--create`（gh pr create）；`init` 支持 TTY 交互式选择模板/项目名
+- **验收**：`explain` 读文件到 LLM 环节；`pr` 正确检测 base；`init --json` 产出完整项目；`--stream` SSE 拼接正确
+
 ---
 
 ## 9. 风险与对策
