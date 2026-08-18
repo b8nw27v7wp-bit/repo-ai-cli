@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { intro } from "@clack/prompts";
 import { getLog, type CommitEntry } from "../lib/git.js";
-import { chatCompletion, llmConfigFromOptions } from "../lib/llm.js";
+import { chatCompletion, streamChatCompletion, llmConfigFromOptions } from "../lib/llm.js";
 import { buildChangelogPrompt } from "../prompts/changelog.js";
 import { writeOutput } from "../lib/output.js";
 import { loadConfig } from "../lib/config.js";
@@ -123,14 +123,24 @@ export async function runChangelog(options: ChangelogOptions): Promise<void> {
   });
 
   let content: string;
+  const llmConfig = llmConfigFromOptions(options, cfg);
+  const stream = options.stream === true && interactive && !isJsonMode() && !options.print;
   try {
-    content = await chatCompletion(messages, llmConfigFromOptions(options, cfg));
+    if (stream) {
+      progressBar.stop("流式生成开始");
+      content = await streamChatCompletion(messages, llmConfig, (t) =>
+        process.stdout.write(t),
+      );
+      process.stdout.write("\n");
+    } else {
+      content = await chatCompletion(messages, llmConfig);
+      progressBar.stop("生成完成");
+    }
   } catch (err) {
     progressBar.stop("生成失败");
     fail((err as Error).message);
     return;
   }
-  progressBar.stop("生成完成");
 
   if (!content.trim()) {
     fail("AI 返回了空内容，未写入文件。请重试。");

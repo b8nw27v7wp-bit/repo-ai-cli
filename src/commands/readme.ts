@@ -4,7 +4,7 @@ import { intro } from "@clack/prompts";
 import { collectFiles } from "../lib/collect-files.js";
 import { buildFileTree } from "../lib/file-tree.js";
 import { allocateBudget, estimateTokens } from "../lib/token-budget.js";
-import { chatCompletion, llmConfigFromOptions } from "../lib/llm.js";
+import { chatCompletion, streamChatCompletion, llmConfigFromOptions } from "../lib/llm.js";
 import { buildReadmePrompt, type ReadmeLanguage } from "../prompts/readme.js";
 import { writeOutput } from "../lib/output.js";
 import { parseGithubRef, cloneRepo } from "../lib/github.js";
@@ -150,15 +150,25 @@ export async function runReadme(options: ReadmeOptions): Promise<void> {
     // 4. 调用 LLM
     progressBar.update("AI 生成 README 中...");
     const messages = buildReadmePrompt(repoName, budget, language);
+    const llmConfig = llmConfigFromOptions(options, cfg);
+    const stream = options.stream === true && interactive && !isJsonMode();
     let content: string;
     try {
-      content = await chatCompletion(messages, llmConfigFromOptions(options, cfg));
+      if (stream) {
+        progressBar.stop("流式生成开始");
+        content = await streamChatCompletion(messages, llmConfig, (t) =>
+          process.stdout.write(t),
+        );
+        process.stdout.write("\n");
+      } else {
+        content = await chatCompletion(messages, llmConfig);
+        progressBar.stop("生成完成");
+      }
     } catch (err) {
       progressBar.stop("生成失败");
       fail((err as Error).message);
       return;
     }
-    progressBar.stop("生成完成");
 
     if (!content.trim()) {
       fail("AI 返回了空内容，未写入文件。请重试。");

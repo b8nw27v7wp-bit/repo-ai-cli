@@ -153,8 +153,25 @@ export async function getDiff(
   const args = ["diff"];
   if (staged && !all) args.push("--cached");
   if (all) args.push("HEAD");
-  args.push("--", ".", ":(exclude)package-lock.json", ":(exclude)pnpm-lock.yaml", ":(exclude)yarn.lock");
+  args.push(...DIFF_PATHSPEC);
 
+  return runDiff(args, cwd, maxBytes);
+}
+
+const DIFF_PATHSPEC = [
+  "--",
+  ".",
+  ":(exclude)package-lock.json",
+  ":(exclude)pnpm-lock.yaml",
+  ":(exclude)yarn.lock",
+];
+
+/** 通用 diff 执行 + 文件解析 + 截断 */
+async function runDiff(
+  args: string[],
+  cwd: string,
+  maxBytes: number,
+): Promise<DiffResult> {
   const raw = await runGit(args, cwd);
   const totalBytes = Buffer.byteLength(raw, "utf8");
 
@@ -175,4 +192,65 @@ export async function getDiff(
   const lastHunkIdx = rawKeep.lastIndexOf("\n@@ ");
   const keep = lastHunkIdx > 0 ? rawKeep.slice(0, lastHunkIdx + 1) : rawKeep;
   return { diff: truncated + keep, totalBytes, truncated: true, files };
+}
+
+/**
+ * 检测默认 base 分支（用于 PR 对比）。
+ * 顺序：origin/HEAD → origin/main → origin/master → main → master；都没有则抛错。
+ */
+export async function detectBaseBranch(cwd: string): Promise<string> {
+  await assertInGitRepo(cwd);
+  const candidates = [
+    "origin/HEAD",
+    "origin/main",
+    "origin/master",
+    "main",
+    "master",
+  ];
+  for (const cand of candidates) {
+    try {
+      const resolved = await runGit(["rev-parse", "--verify", "--quiet", cand], cwd);
+      if (resolved.trim()) {
+        // origin/HEAD 是一个符号引用，展开为实际分支名
+        if (cand === "origin/HEAD") {
+          try {
+            const short = await runGit(
+              ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+              cwd,
+            );
+            if (short.trim()) return short.trim();
+          } catch {
+            /* 回退到 origin/main */
+          }
+        }
+        return cand;
+      }
+    } catch {
+      /* 继续试下一个 */
+    }
+  }
+  throw new GitError(
+    "无法自动检测 base 分支。可用 --base 指定，如 --base main 或 --base origin/main",
+  );
+}
+
+/**
+ * 读取当前分支相对 base 的差异（git diff base...HEAD，三点：从 merge-base 开始）。
+ * maxBytes 超限时截断。
+ */
+export async function getBranchDiff(
+  cwd: string,
+  options: { base: string; maxBytes?: number },
+): Promise<DiffResult> {
+  await assertInGitRepo(cwd);
+  const maxBytes = options.maxBytes ?? 200 * 1024;
+  const args = ["diff", `${options.base}...HEAD`, ...DIFF_PATHSPEC];
+  return runDiff(args, cwd, maxBytes);
+}
+
+/** 当前分支名（缩写） */
+export async function getCurrentBranch(cwd: string): Promise<string> {
+  await assertInGitRepo(cwd);
+  const out = await runGit(["rev-parse", "--abbrev-ref", "HEAD"], cwd);
+  return out.trim();
 }

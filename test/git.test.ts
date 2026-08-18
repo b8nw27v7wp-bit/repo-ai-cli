@@ -3,7 +3,7 @@ import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { getDiff, getLog, assertInGitRepo, GitError } from "../src/lib/git.js";
+import { getDiff, getLog, assertInGitRepo, GitError, detectBaseBranch, getBranchDiff, getCurrentBranch } from "../src/lib/git.js";
 
 let repo: string;
 
@@ -106,5 +106,25 @@ describe("getLog", () => {
   it("subject 来自 commit message 首行", async () => {
     const log = await getLog(repo, { max: 50 });
     expect(log[log.length - 1]?.subject).toContain("init");
+  });
+});
+
+describe("分支助手", () => {
+  it("detectBaseBranch 无远程时回退到本地 main", async () => {
+    await expect(detectBaseBranch(repo)).resolves.toEqual(
+      expect.stringMatching(/^(main|master)$/),
+    );
+  });
+
+  it("getCurrentBranch 返回当前分支", async () => {
+    await expect(getCurrentBranch(repo)).resolves.toMatch(/^(main|master)$/);
+  });
+
+  it("getBranchDiff 对 main...HEAD 返回空 diff（无分叉）", async () => {
+    const base = await detectBaseBranch(repo);
+    const res = await getBranchDiff(repo, { base });
+    expect(res.diff.trim()).toBe("");
+    expect(res.files).toHaveLength(0);
+    expect(res.truncated).toBe(false);
   });
 });
