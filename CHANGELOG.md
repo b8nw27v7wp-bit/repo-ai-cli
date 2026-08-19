@@ -1,5 +1,21 @@
 # repo-ai-cli
 
+## 0.6.0
+
+### Minor Changes
+
+- 34a23fc: v0.6.0 深度拓展：
+
+  - **provider 扩展至 13 家**：新增 Ollama（本地部署、无需 API key）、OpenRouter、Groq、火山方舟、Google Gemini（OpenAI 兼容端点）
+  - **Profile 多配置系统**：`config set/unset --profile <name>`、`config use <name>`、`config rm-profile <name>`，支持多套 provider/model/key 配置快速切换；所有 AI 命令支持 `--profile` 参数
+  - **全局 `--verbose` 调试日志**（或 `REPO_AI_VERBOSE=1`）：输出到 stderr，覆盖 LLM 请求、重试、provider 解析、git clone 镜像回退
+  - **`deps --outdated` / `--audit`**：封装 npm outdated / npm audit，友好表格 + JSON 输出，高危漏洞时退出码非 0（CI 门禁）
+  - **新命令 `badges`**：离线检测仓库上下文（CI workflow / npm / LICENSE / node engines / GitHub remote）自动生成 README 徽章
+  - **新命令 `contributing`**：离线生成 CONTRIBUTING.md（中/英），自动探测包管理器与测试命令
+  - `doctor` 显示激活的 profile；`config init` 支持 Ollama 免 key 流程与 `--profile`
+
+  命令总数 21 → 23。测试 173 → 210。
+
 ## 0.5.0
 
 ### Minor Changes
