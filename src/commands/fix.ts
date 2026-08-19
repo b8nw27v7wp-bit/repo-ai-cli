@@ -18,7 +18,7 @@ import type { FixOptions } from "../types.js";
  */
 export async function runFix(options: FixOptions): Promise<void> {
   setJsonMode(options.json === true);
-  const cfg = await loadConfig();
+  const cfg = await loadConfig(options.profile);
   if (interactive && !isJsonMode()) intro("repo-ai fix");
 
   const p = progress("收集项目材料...");

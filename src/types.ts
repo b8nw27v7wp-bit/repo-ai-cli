@@ -48,6 +48,8 @@ export interface ReadmeOptions {
   baseUrl?: string;
   model?: string;
   apiKey?: string;
+  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
+  profile?: string;
   /** 最大输出 token 数 */
   maxOutputTokens?: number;
   /** 采样温度 */
@@ -68,6 +70,8 @@ export interface CommitOptions {
   baseUrl?: string;
   model?: string;
   apiKey?: string;
+  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
+  profile?: string;
   /** 最大输出 token 数 */
   maxOutputTokens?: number;
   /** 采样温度 */
@@ -91,6 +95,8 @@ export interface ReviewOptions {
   baseUrl?: string;
   model?: string;
   apiKey?: string;
+  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
+  profile?: string;
   maxOutputTokens?: number;
   temperature?: number;
   /** JSON 输出（脚本友好） */
@@ -108,6 +114,8 @@ export interface ExplainOptions {
   baseUrl?: string;
   model?: string;
   apiKey?: string;
+  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
+  profile?: string;
   maxOutputTokens?: number;
   temperature?: number;
   /** JSON 输出（脚本友好） */
@@ -125,6 +133,8 @@ export interface PrOptions {
   baseUrl?: string;
   model?: string;
   apiKey?: string;
+  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
+  profile?: string;
   maxOutputTokens?: number;
   temperature?: number;
   /** JSON 输出（脚本友好） */
@@ -192,6 +202,28 @@ export interface StatsOptions {
 export interface DepsOptions {
   /** JSON 输出（脚本友好） */
   json?: boolean;
+  /** 检查依赖是否有新版本（封装 npm outdated，离线解析清单本身） */
+  outdated?: boolean;
+  /** 运行 npm audit 安全检查 */
+  audit?: boolean;
+}
+
+export interface BadgesOptions {
+  /** 输出文件（默认 stdout） */
+  output?: string;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface ContributingOptions {
+  /** 输出文件（默认 CONTRIBUTING.md） */
+  output?: string;
+  /** 语言：zh | en（默认 zh） */
+  language?: "zh" | "en";
+  /** 覆盖已存在的文件 */
+  force?: boolean;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
 }
 
 export interface TranslateOptions {
@@ -207,6 +239,8 @@ export interface TranslateOptions {
   baseUrl?: string;
   model?: string;
   apiKey?: string;
+  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
+  profile?: string;
   maxOutputTokens?: number;
   temperature?: number;
   /** JSON 输出（脚本友好） */
@@ -226,6 +260,8 @@ export interface TestOptions {
   baseUrl?: string;
   model?: string;
   apiKey?: string;
+  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
+  profile?: string;
   maxOutputTokens?: number;
   temperature?: number;
   /** JSON 输出（脚本友好） */
@@ -245,6 +281,8 @@ export interface RefactorOptions {
   baseUrl?: string;
   model?: string;
   apiKey?: string;
+  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
+  profile?: string;
   maxOutputTokens?: number;
   temperature?: number;
   /** JSON 输出（脚本友好） */
@@ -269,6 +307,8 @@ export interface AskOptions {
   baseUrl?: string;
   model?: string;
   apiKey?: string;
+  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
+  profile?: string;
   maxOutputTokens?: number;
   temperature?: number;
   /** 流式输出（TTY 下边生成边打印） */
@@ -288,6 +328,8 @@ export interface FixOptions {
   baseUrl?: string;
   model?: string;
   apiKey?: string;
+  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
+  profile?: string;
   maxOutputTokens?: number;
   temperature?: number;
   /** JSON 输出（脚本友好） */
@@ -320,6 +362,8 @@ export interface ChangelogOptions {
   baseUrl?: string;
   model?: string;
   apiKey?: string;
+  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
+  profile?: string;
   maxOutputTokens?: number;
   temperature?: number;
   /** 流式输出（TTY 下边生成边打印） */
@@ -329,7 +373,7 @@ export interface ChangelogOptions {
 }
 
 export interface LLMConfig {
-  /** 提供商 id（deepseek/openai/moonshot/zhipu/qwen/minimax/xai/siliconflow） */
+  /** 提供商 id（deepseek/openai/moonshot/zhipu/qwen/minimax/xai/siliconflow/ollama/openrouter/groq/volcengine/gemini） */
   provider?: string;
   apiKey?: string;
   baseUrl?: string;

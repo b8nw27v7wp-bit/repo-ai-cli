@@ -30,7 +30,7 @@ function normalizeFramework(v?: string): TestFramework | null {
  */
 export async function runTest(options: TestOptions): Promise<void> {
   setJsonMode(options.json === true);
-  const cfg = await loadConfig();
+  const cfg = await loadConfig(options.profile);
   if (interactive && !isJsonMode()) intro("repo-ai test");
 
   const abs = path.resolve(options.file);

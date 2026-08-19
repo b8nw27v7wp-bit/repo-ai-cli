@@ -42,7 +42,7 @@ export async function runReadme(options: ReadmeOptions): Promise<void> {
   setJsonMode(options.json === true);
   if (interactive && !isJsonMode()) intro("repo-ai readme");
 
-  const cfg = await loadConfig();
+  const cfg = await loadConfig(options.profile);
 
   const target = options.target || ".";
   const progressBar = progress("准备中...");

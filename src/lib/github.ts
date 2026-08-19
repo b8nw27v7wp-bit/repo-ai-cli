@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { debug } from "./log.js";
 
 /** 解析 GitHub 仓库引用为 clone URL + 分支。支持:
  * - owner/repo
@@ -67,7 +68,9 @@ export async function cloneRepo(
   let lastErr: unknown = null;
   for (const target of [url, mirrorUrl]) {
     try {
+      debug(`git clone --depth 1 ${target}`);
       await runGit([...args, target, dir]);
+      debug(`克隆成功: ${dir}`);
       return {
         dir,
         cleanup: async () => {

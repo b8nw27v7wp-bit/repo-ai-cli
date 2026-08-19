@@ -1,7 +1,7 @@
 {
   "name": "repo-ai-cli",
   "version": "0.5.0",
-  "description": "AI-powered repo helper CLI: bilingual README + conventional commits",
+  "description": "AI-powered repo helper CLI: 23 commands for README, commit, changelog, review, tests, PRs & offline repo utilities (secrets, stats, deps audit, badges)",
   "main": "./dist/index.js",
   "scripts": {
     "build": "tsup",
@@ -15,7 +15,17 @@
     "release:publish": "changeset publish",
     "release:version": "changeset version"
   },
-  "keywords": [],
+  "keywords": [
+    "cli",
+    "ai",
+    "llm",
+    "readme",
+    "commit",
+    "changelog",
+    "code-review",
+    "byok",
+    "developer-tools"
+  ],
   "author": "",
   "license": "MIT",
   "type": "module",

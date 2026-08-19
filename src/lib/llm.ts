@@ -1,5 +1,6 @@
 import type { ChatMessage, LLMConfig } from "../types.js";
 import { resolveLLMConfig, type ResolveInput } from "./providers.js";
+import { debug } from "./log.js";
 
 export class LLMError extends Error {
   constructor(
@@ -37,6 +38,9 @@ function buildRequest(
 ): RequestSpec {
   const resolved = resolveLLMConfig(config as ResolveInput);
   const baseUrl = resolved.baseUrl.replace(/\/$/, "");
+  debug(
+    `LLM 请求: provider=${resolved.providerId} model=${resolved.model} url=${baseUrl}/chat/completions stream=${stream} msgs=${messages.length}`,
+  );
   return {
     url: `${baseUrl}/chat/completions`,
     headers: {
@@ -86,6 +90,7 @@ export async function chatCompletion(
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     if (attempt > 0) {
       const backoff = Math.min(2 ** attempt * 1000, 8_000);
+      debug(`重试 ${attempt}/${maxRetries}（${String(lastError instanceof Error ? lastError.message : lastError)}），${backoff}ms 后`);
       await sleep(backoff);
     }
 
