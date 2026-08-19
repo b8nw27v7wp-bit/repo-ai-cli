@@ -1,6 +1,6 @@
 import { assertInGitRepo } from "./git.js";
 import { resolveLLMConfig } from "./providers.js";
-import { loadConfig, getConfigPath } from "./config.js";
+import { loadConfig, loadRawConfig, getConfigPath } from "./config.js";
 
 export interface CheckResult {
   id: string;
@@ -52,16 +52,18 @@ export async function collectChecks(cwd: string): Promise<CheckResult[]> {
     });
   }
 
-  // 3. 持久化配置
+  // 3. 持久化配置（含激活 profile 提示）
   const cfg = await loadConfig();
+  const rawCfg = await loadRawConfig();
   const cfgKeys = Object.keys(cfg).length;
+  const profileNote = rawCfg.activeProfile ? ` · profile: ${rawCfg.activeProfile}` : "";
   checks.push(
     cfgKeys > 0
       ? {
           id: "config",
           name: "持久化配置",
           status: "ok",
-          detail: `${getConfigPath()}（${cfgKeys} 项）`,
+          detail: `${getConfigPath()}（${cfgKeys} 项${profileNote}）`,
         }
       : {
           id: "config",

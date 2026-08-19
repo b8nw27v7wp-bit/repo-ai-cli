@@ -59,7 +59,7 @@ async function createGithubPr(
  */
 export async function runPr(options: PrOptions): Promise<void> {
   setJsonMode(options.json === true);
-  const cfg = await loadConfig();
+  const cfg = await loadConfig(options.profile);
   if (interactive && !isJsonMode()) intro("repo-ai pr");
 
   const cwd = process.cwd();

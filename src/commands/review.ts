@@ -26,7 +26,7 @@ import type { ReviewOptions } from "../types.js";
  */
 export async function runReview(options: ReviewOptions): Promise<void> {
   setJsonMode(options.json === true);
-  const cfg = await loadConfig();
+  const cfg = await loadConfig(options.profile);
   if (interactive && !isJsonMode()) intro("repo-ai review");
 
   const cwd = process.cwd();

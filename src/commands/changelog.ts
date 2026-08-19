@@ -31,7 +31,7 @@ async function defaultRange(cwd: string): Promise<{ range?: string; label: strin
  */
 export async function runChangelog(options: ChangelogOptions): Promise<void> {
   setJsonMode(options.json === true);
-  const cfg = await loadConfig();
+  const cfg = await loadConfig(options.profile);
   if (interactive && !isJsonMode()) intro("repo-ai changelog");
 
   const cwd = process.cwd();

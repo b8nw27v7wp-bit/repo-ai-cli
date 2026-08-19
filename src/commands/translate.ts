@@ -27,7 +27,7 @@ const TARGETS: TranslateTarget[] = ["zh", "en", "bilingual"];
  */
 export async function runTranslate(options: TranslateOptions): Promise<void> {
   setJsonMode(options.json === true);
-  const cfg = await loadConfig();
+  const cfg = await loadConfig(options.profile);
   if (interactive && !isJsonMode()) intro("repo-ai translate");
 
   const abs = path.resolve(options.file);

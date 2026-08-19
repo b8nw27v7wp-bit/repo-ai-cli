@@ -23,6 +23,8 @@ import {
 import { runAsk } from "./commands/ask.js";
 import { runFix } from "./commands/fix.js";
 import { runRelease } from "./commands/release.js";
+import { runBadges } from "./commands/badges.js";
+import { runContributing } from "./commands/contributing.js";
 import {
   runConfigGet,
   runConfigSet,
@@ -30,28 +32,44 @@ import {
   runConfigReset,
   runConfigList,
   runConfigInit,
+  runConfigUse,
+  runConfigRemoveProfile,
 } from "./commands/config.js";
+import { setVerbose } from "./lib/log.js";
 import pkg from "../package.json" with { type: "json" };
 
 const program = new Command();
 
 program
   .name("repo-ai-cli")
-  .description("AI-powered repo helper: 21 commands — README, commit, changelog, review, explain, pr, init, secrets, doctor, gitignore, license, stats, deps, translate, test, refactor, hooks, ask, fix, release, config")
-  .version(pkg.version);
+  .description("AI-powered repo helper: 23 commands — README, commit, changelog, review, explain, pr, init, secrets, doctor, gitignore, license, stats, deps, translate, test, refactor, hooks, ask, fix, release, badges, contributing, config")
+  .version(pkg.version)
+  .option("--verbose", "debug output to stderr (network, config, provider resolution)");
 
-/** 给命令挂上 4 个共用的 LLM 选项（provider/base-url/model/api-key） */
+// 全局 --verbose（或 REPO_AI_VERBOSE=1）：在任何子命令执行前开启调试日志
+program.hook("preAction", () => {
+  const opts = program.opts();
+  if (opts.verbose || process.env.REPO_AI_VERBOSE === "1") {
+    setVerbose(true);
+  }
+});
+
+/** 给命令挂上共用的 LLM 选项（provider/base-url/model/api-key/profile） */
 function withLLMOptions(cmd: Command): Command {
   return cmd
     .option(
       "--provider <id>",
-      "LLM provider: deepseek|openai|moonshot|zhipu|qwen|minimax|xai|siliconflow",
+      "LLM provider: deepseek|openai|moonshot|zhipu|qwen|minimax|xai|siliconflow|ollama|openrouter|groq|volcengine|gemini",
     )
     .option("--base-url <url>", "custom OpenAI-compatible endpoint (overrides provider)")
     .option("--model <name>", "model name (overrides provider default)")
     .option(
       "--api-key <key>",
       "API key (prefer env vars / config set; avoid in shell history)",
+    )
+    .option(
+      "--profile <name>",
+      'use a named config profile (see config set --profile; default: active profile)',
     );
 }
 
@@ -92,6 +110,7 @@ readmeCmd.action(async (target: string, opts: Record<string, unknown>) => {
       baseUrl: opts.baseUrl as string | undefined,
       model: opts.model as string | undefined,
       apiKey: opts.apiKey as string | undefined,
+      profile: opts.profile as string | undefined,
     });
   } catch (err) {
     handleError(err, Boolean(opts.json));
@@ -127,6 +146,7 @@ commitCmd.action(async (opts: Record<string, unknown>) => {
       baseUrl: opts.baseUrl as string | undefined,
       model: opts.model as string | undefined,
       apiKey: opts.apiKey as string | undefined,
+      profile: opts.profile as string | undefined,
     });
   } catch (err) {
     handleError(err, Boolean(opts.json));
@@ -166,6 +186,7 @@ changelogCmd.action(async (opts: Record<string, unknown>) => {
       baseUrl: opts.baseUrl as string | undefined,
       model: opts.model as string | undefined,
       apiKey: opts.apiKey as string | undefined,
+      profile: opts.profile as string | undefined,
     });
   } catch (err) {
     handleError(err, Boolean(opts.json));
@@ -201,6 +222,7 @@ reviewCmd.action(async (opts: Record<string, unknown>) => {
       baseUrl: opts.baseUrl as string | undefined,
       model: opts.model as string | undefined,
       apiKey: opts.apiKey as string | undefined,
+      profile: opts.profile as string | undefined,
     });
   } catch (err) {
     handleError(err, Boolean(opts.json));
@@ -232,6 +254,7 @@ explainCmd.action(async (target: string, opts: Record<string, unknown>) => {
       baseUrl: opts.baseUrl as string | undefined,
       model: opts.model as string | undefined,
       apiKey: opts.apiKey as string | undefined,
+      profile: opts.profile as string | undefined,
     });
   } catch (err) {
     handleError(err, Boolean(opts.json));
@@ -263,6 +286,7 @@ prCmd.action(async (opts: Record<string, unknown>) => {
       baseUrl: opts.baseUrl as string | undefined,
       model: opts.model as string | undefined,
       apiKey: opts.apiKey as string | undefined,
+      profile: opts.profile as string | undefined,
     });
   } catch (err) {
     handleError(err, Boolean(opts.json));
@@ -384,12 +408,18 @@ statsCmd.action(async (target: string, opts: Record<string, unknown>) => {
 
 const depsCmd = program
   .command("deps")
-  .description("Parse and list project dependencies from manifest files (offline)")
+  .description("List dependencies; --outdated / --audit check upgrades & vulnerabilities")
+  .option("--outdated", "check for newer versions (wraps npm outdated)")
+  .option("--audit", "run a security audit (wraps npm audit)")
   .option("--json", "output machine-readable JSON");
 
 depsCmd.action(async (opts: Record<string, unknown>) => {
   try {
-    await runDeps({ json: Boolean(opts.json) });
+    await runDeps({
+      outdated: Boolean(opts.outdated),
+      audit: Boolean(opts.audit),
+      json: Boolean(opts.json),
+    });
   } catch (err) {
     handleError(err, Boolean(opts.json));
   }
@@ -422,6 +452,7 @@ translateCmd.action(async (file: string, opts: Record<string, unknown>) => {
       baseUrl: opts.baseUrl as string | undefined,
       model: opts.model as string | undefined,
       apiKey: opts.apiKey as string | undefined,
+      profile: opts.profile as string | undefined,
     });
   } catch (err) {
     handleError(err, Boolean(opts.json));
@@ -455,6 +486,7 @@ testCmd.action(async (file: string, opts: Record<string, unknown>) => {
       baseUrl: opts.baseUrl as string | undefined,
       model: opts.model as string | undefined,
       apiKey: opts.apiKey as string | undefined,
+      profile: opts.profile as string | undefined,
     });
   } catch (err) {
     handleError(err, Boolean(opts.json));
@@ -488,6 +520,7 @@ refactorCmd.action(async (file: string, opts: Record<string, unknown>) => {
       baseUrl: opts.baseUrl as string | undefined,
       model: opts.model as string | undefined,
       apiKey: opts.apiKey as string | undefined,
+      profile: opts.profile as string | undefined,
     });
   } catch (err) {
     handleError(err, Boolean(opts.json));
@@ -564,6 +597,7 @@ askCmd.action(async (question: string[], opts: Record<string, unknown>) => {
       baseUrl: opts.baseUrl as string | undefined,
       model: opts.model as string | undefined,
       apiKey: opts.apiKey as string | undefined,
+      profile: opts.profile as string | undefined,
     });
   } catch (err) {
     handleError(err, Boolean(opts.json));
@@ -595,6 +629,7 @@ fixCmd.action(async (description: string[], opts: Record<string, unknown>) => {
       baseUrl: opts.baseUrl as string | undefined,
       model: opts.model as string | undefined,
       apiKey: opts.apiKey as string | undefined,
+      profile: opts.profile as string | undefined,
     });
   } catch (err) {
     handleError(err, Boolean(opts.json));
@@ -628,9 +663,10 @@ const configCmd = program
 configCmd
   .command("get <key>")
   .description("print a config value")
-  .action(async (key: string) => {
+  .option("--profile <name>", "read from a named profile")
+  .action(async (key: string, opts: Record<string, unknown>) => {
     try {
-      await runConfigGet(key);
+      await runConfigGet(key, { profile: opts.profile as string | undefined });
     } catch (err) {
       handleError(err, false);
     }
@@ -639,10 +675,14 @@ configCmd
 configCmd
   .command("set <key> <value>")
   .description("set a config value (provider/baseUrl/model/apiKey/maxTokens/...)")
+  .option("--profile <name>", 'save into a named profile (created on first use)')
   .option("--json", "output machine-readable JSON")
   .action(async (key: string, value: string, opts: Record<string, unknown>) => {
     try {
-      await runConfigSet(key, value, { json: Boolean(opts.json) });
+      await runConfigSet(key, value, {
+        json: Boolean(opts.json),
+        profile: opts.profile as string | undefined,
+      });
     } catch (err) {
       handleError(err, Boolean(opts.json));
     }
@@ -651,10 +691,14 @@ configCmd
 configCmd
   .command("unset <key>")
   .description("remove a config value")
+  .option("--profile <name>", "remove from a named profile")
   .option("--json", "output machine-readable JSON")
   .action(async (key: string, opts: Record<string, unknown>) => {
     try {
-      await runConfigUnset(key, { json: Boolean(opts.json) });
+      await runConfigUnset(key, {
+        json: Boolean(opts.json),
+        profile: opts.profile as string | undefined,
+      });
     } catch (err) {
       handleError(err, Boolean(opts.json));
     }
@@ -662,7 +706,7 @@ configCmd
 
 configCmd
   .command("reset")
-  .description("clear all persisted config")
+  .description("clear all persisted config (including all profiles)")
   .option("--json", "output machine-readable JSON")
   .action(async (opts: Record<string, unknown>) => {
     try {
@@ -675,7 +719,7 @@ configCmd
 configCmd
   .command("list")
   .alias("ls")
-  .description("show all persisted config (apiKey masked)")
+  .description("show all profiles & config (apiKey masked; * = active)")
   .option("--json", "output machine-readable JSON")
   .action(async (opts: Record<string, unknown>) => {
     try {
@@ -686,15 +730,78 @@ configCmd
   });
 
 configCmd
+  .command("use <name>")
+  .description('activate a profile ("default" to deactivate)')
+  .option("--json", "output machine-readable JSON")
+  .action(async (name: string, opts: Record<string, unknown>) => {
+    try {
+      await runConfigUse(name, { json: Boolean(opts.json) });
+    } catch (err) {
+      handleError(err, Boolean(opts.json));
+    }
+  });
+
+configCmd
+  .command("rm-profile <name>")
+  .description("delete a named profile")
+  .option("--json", "output machine-readable JSON")
+  .action(async (name: string, opts: Record<string, unknown>) => {
+    try {
+      await runConfigRemoveProfile(name, { json: Boolean(opts.json) });
+    } catch (err) {
+      handleError(err, Boolean(opts.json));
+    }
+  });
+
+configCmd
   .command("init")
   .description("interactive wizard: pick provider + enter apiKey")
-  .action(async () => {
+  .option("--profile <name>", "save into a named profile")
+  .action(async (opts: Record<string, unknown>) => {
     try {
-      await runConfigInit();
+      await runConfigInit(opts.profile as string | undefined);
     } catch (err) {
       handleError(err, false);
     }
   });
+
+const badgesCmd = program
+  .command("badges")
+  .description("Generate README badges from repo context (CI/npm/license/node, offline)")
+  .option("-o, --output <file>", "write to file (default: stdout)")
+  .option("--json", "output machine-readable JSON");
+
+badgesCmd.action(async (opts: Record<string, unknown>) => {
+  try {
+    await runBadges({
+      output: opts.output as string | undefined,
+      json: Boolean(opts.json),
+    });
+  } catch (err) {
+    handleError(err, Boolean(opts.json));
+  }
+});
+
+const contributingCmd = program
+  .command("contributing")
+  .description("Generate a CONTRIBUTING.md (offline, zh/en)")
+  .option("-o, --output <file>", "output file", "CONTRIBUTING.md")
+  .option("-l, --language <lang>", "zh | en", "zh")
+  .option("-f, --force", "overwrite existing file")
+  .option("--json", "output machine-readable JSON");
+
+contributingCmd.action(async (opts: Record<string, unknown>) => {
+  try {
+    await runContributing({
+      output: opts.output as string | undefined,
+      language: opts.language as "zh" | "en" | undefined,
+      force: Boolean(opts.force),
+      json: Boolean(opts.json),
+    });
+  } catch (err) {
+    handleError(err, Boolean(opts.json));
+  }
+});
 
 function handleError(err: unknown, json: boolean): void {
   const msg = err instanceof Error ? err.message : String(err);

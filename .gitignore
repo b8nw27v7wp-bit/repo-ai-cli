@@ -6,3 +6,4 @@ coverage/
 *.log
 # changesets 自动生成的说明文件，changeset 文件（initial-release.md 等）需要提交
 .changeset/README.md
+.hermes.md

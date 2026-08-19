@@ -28,7 +28,7 @@ function cleanMessage(raw: string): string {
 
 export async function runCommit(options: CommitOptions): Promise<void> {
   setJsonMode(options.json === true);
-  const cfg = await loadConfig();
+  const cfg = await loadConfig(options.profile);
   if (interactive && !isJsonMode()) intro("repo-ai commit");
 
   const cwd = process.cwd();

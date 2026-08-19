@@ -1,8 +1,8 @@
 # repo-ai-cli
 
-**AI-powered repository helper CLI: 21 commands to generate bilingual READMEs, conventional commits, CHANGELOGs, code reviews, tests, docs, PRs and more — plus offline utilities for secrets, stats, deps, gitignore, LICENSE and git hooks.**
+**AI-powered repository helper CLI: 23 commands to generate bilingual READMEs, conventional commits, CHANGELOGs, code reviews, tests, docs, PRs and more — plus offline utilities for secrets, stats, deps audit, gitignore, LICENSE, badges and git hooks.**
 
-**AI 驱动的仓库助手 CLI：21 条命令覆盖仓库全流程 —— 生成双语 README、规范 commit、CHANGELOG、代码审查、单元测试、文档翻译、PR 描述、代码库问答，以及密钥扫描、仓库统计、依赖解析、.gitignore / LICENSE 生成、git 钩子等离线工具。**
+**AI 驱动的仓库助手 CLI：23 条命令覆盖仓库全流程 —— 生成双语 README、规范 commit、CHANGELOG、代码审查、单元测试、文档翻译、PR 描述、代码库问答，以及密钥扫描、仓库统计、依赖审计、.gitignore / LICENSE / 徽章 / 贡献指南生成、git 钩子等离线工具。**
 
 [![CI](https://github.com/b8nw27v7wp-bit/repo-ai-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/b8nw27v7wp-bit/repo-ai-cli/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/repo-ai-cli.svg)](https://www.npmjs.com/package/repo-ai-cli)
@@ -85,11 +85,23 @@
 - 🛡️ **Robust Error Handling** — Automatic retries with exponential backoff for transient API errors, and graceful fallbacks to prevent corrupted output.
   **健壮的错误处理** — 对瞬时 API 错误进行指数退避重试，并提供优雅降级以防止输出损坏。
 
-- 🔑 **BYOK (Bring Your Own Key)** — Use your own API key from 8+ providers (DeepSeek, OpenAI, Kimi, GLM, Qwen, MiniMax, Grok, SiliconFlow) or any OpenAI-compatible endpoint. Zero server-side costs, and your code is only sent to the API you configure.
-  **BYOK 自带 API Key** — 支持 DeepSeek、OpenAI、Kimi、GLM、通义千问、MiniMax、Grok、硅基流动等 8+ 家国内外提供商，以及任意 OpenAI 兼容端点。零服务端成本，代码仅发送至你配置的 API。
+- 🔑 **BYOK (Bring Your Own Key)** — Use your own API key from 13 providers (DeepSeek, OpenAI, Kimi, GLM, Qwen, MiniMax, Grok, SiliconFlow, Ollama local, OpenRouter, Groq, Volcengine Ark, Gemini) or any OpenAI-compatible endpoint. Zero server-side costs, and your code is only sent to the API you configure. Ollama runs fully local with no API key at all.
+  **BYOK 自带 API Key** — 支持 DeepSeek、OpenAI、Kimi、GLM、通义千问、MiniMax、Grok、硅基流动、Ollama（本地免 key）、OpenRouter、Groq、火山方舟、Gemini 共 13 家国内外提供商，以及任意 OpenAI 兼容端点。零服务端成本，代码仅发送至你配置的 API；Ollama 完全本地运行、无需任何 key。
 
-- 🧪 **Comprehensive Testing** — 173+ unit and end-to-end tests covering file filtering, token budgeting, git integration, LLM error handling (incl. streaming), secret scanning, semantic versioning, provider resolution, config persistence, git hooks, and more.
-  **全面测试覆盖** — 173+ 单元测试与端到端测试，覆盖文件过滤、Token 预算、Git 集成、LLM 错误处理（含流式）、密钥扫描、语义化版本、提供商解析、配置持久化、git 钩子等核心逻辑。
+- 👥 **Config Profiles** — Maintain multiple provider/model/key sets (`work`, `personal`, `local`...) with `config set --profile`, switch with `config use`, and pick per-command via `--profile`.
+  **多配置 Profile** — 用 `config set --profile` 维护多套 provider/model/key 配置（如 work、personal、local），`config use` 一键切换，任意 AI 命令可用 `--profile` 临时指定。
+
+- 🔎 **Verbose Debugging** — Global `--verbose` (or `REPO_AI_VERBOSE=1`) prints LLM request URLs, retries, provider resolution and clone fallbacks to stderr — without polluting stdout or `--json` output.
+  **调试日志** — 全局 `--verbose`（或 `REPO_AI_VERBOSE=1`）在 stderr 输出 LLM 请求地址、重试、provider 解析与克隆回退，不污染 stdout 与 `--json`。
+
+- 📦 **Dependency Health** — `deps --outdated` / `deps --audit` wrap npm with friendly tables and CI exit codes, so upgrade and vulnerability checks fit right into your pipeline.
+  **依赖体检** — `deps --outdated` / `deps --audit` 封装 npm outdated / audit，输出友好表格并带 CI 退出码，升级与安全检查可直接接入流水线。
+
+- 🏅 **Badges & Contributing Generators** — `badges` detects your CI workflow / npm package / license / node engines and emits ready-to-paste README badges; `contributing` scaffolds a zh/en CONTRIBUTING.md with your repo details auto-filled.
+  **徽章与贡献指南生成** — `badges` 自动探测 CI workflow / npm 包 / LICENSE / Node 版本并生成可直接粘贴的 README 徽章；`contributing` 生成中英双语 CONTRIBUTING.md 并自动填充仓库信息。
+
+- 🧪 **Comprehensive Testing** — 210+ unit and end-to-end tests covering file filtering, token budgeting, git integration, LLM error handling (incl. streaming), secret scanning, semantic versioning, provider resolution, config profiles, git hooks, npm audit parsing, badge/contributing generation, and more.
+  **全面测试覆盖** — 210+ 单元测试与端到端测试，覆盖文件过滤、Token 预算、Git 集成、LLM 错误处理（含流式）、密钥扫描、语义化版本、提供商解析、配置 Profile、git 钩子、npm 审计解析、徽章/贡献指南生成等核心逻辑。
 
 ---
 
@@ -143,6 +155,13 @@ export DASHSCOPE_API_KEY=sk-xxx         # 通义千问
 export MINIMAX_API_KEY=xxx              # MiniMax
 export XAI_API_KEY=xxx                  # Grok
 export SILICONFLOW_API_KEY=sk-xxx       # 硅基流动
+export OPENROUTER_API_KEY=sk-or-xxx     # OpenRouter
+export GROQ_API_KEY=gsk_xxx             # Groq
+export VOLCENGINE_API_KEY=xxx           # 火山方舟
+export GEMINI_API_KEY=xxx               # Google Gemini
+
+# Ollama：完全本地，无需任何 key（先 ollama pull llama3.2）
+repo-ai-cli readme --provider ollama --model llama3.2
 
 # Or any custom OpenAI-compatible endpoint:
 export LLM_BASE_URL=https://your-endpoint/v1
@@ -154,6 +173,25 @@ repo-ai-cli readme --provider siliconflow --model Qwen/Qwen2.5-7B-Instruct
 ```
 
 *配置优先级：CLI 参数 > 环境变量 > config 文件 > 默认值。Windows (cmd) 用 `set VAR=xxx`，PowerShell 用 `$env:VAR="xxx"`。*
+
+### Config Profiles — 多配置切换（v0.6.0）
+
+```bash
+# 为不同场景维护多套配置
+repo-ai-cli config set provider deepseek --profile work
+repo-ai-cli config set apiKey sk-xxx --profile work
+repo-ai-cli config set provider ollama --model qwen2.5:14b --profile local
+
+# 切换激活 profile（影响所有命令的默认配置）
+repo-ai-cli config use work
+repo-ai-cli config list          # 查看所有 profile（* = 激活）
+
+# 单次命令临时使用某个 profile（不改激活状态）
+repo-ai-cli commit --profile local
+
+# 删除 profile
+repo-ai-cli config rm-profile local
+```
 
 ### Generate a README — 生成 README
 
@@ -308,6 +346,19 @@ repo-ai-cli stats
 
 # List dependencies from package.json / requirements.txt
 repo-ai-cli deps
+
+# Check for upgrades & vulnerabilities (wraps npm, CI-friendly)
+repo-ai-cli deps --outdated
+repo-ai-cli deps --audit
+repo-ai-cli deps --outdated --audit --json
+
+# Generate README badges from repo context (CI/npm/license/node)
+repo-ai-cli badges
+repo-ai-cli badges -o BADGES.md
+
+# Generate a CONTRIBUTING.md (zh default, --language en for English)
+repo-ai-cli contributing
+repo-ai-cli contributing --language en -f
 ```
 
 ### Translate Documents — 文档翻译
@@ -423,8 +474,14 @@ repo-ai-cli init my-cli --json
 | `MINIMAX_API_KEY` | One of | MiniMax API key |
 | `XAI_API_KEY` | One of | xAI (Grok) API key |
 | `SILICONFLOW_API_KEY` | One of | 硅基流动 API key |
+| `OPENROUTER_API_KEY` | One of | OpenRouter API key |
+| `GROQ_API_KEY` | One of | Groq API key |
+| `VOLCENGINE_API_KEY` | One of | 火山方舟 (Volcengine Ark) API key |
+| `GEMINI_API_KEY` | One of | Google Gemini API key |
+| `OLLAMA_API_KEY` | No | Ollama 本地部署无需 key（设置亦可，将被忽略校验） |
 | `LLM_BASE_URL` + `LLM_API_KEY` | Custom | Any OpenAI-compatible endpoint |
 | `LLM_MODEL` | No | Default model override |
+| `REPO_AI_VERBOSE` | No | `1` 等同全局 `--verbose`（调试日志输出到 stderr） |
 | `GITHUB_MIRROR` | No | GitHub mirror prefix (default `https://gh-proxy.com/`), used when direct access fails |
 
 *未显式指定 provider 时，工具按上表顺序自动选择第一个已配置 key 的提供商。*
@@ -442,10 +499,11 @@ repo-ai-cli init my-cli --json
 | `--max-tokens <n>` | Token budget for the LLM call | `48000` |
 | `--max-file-kb <n>` | Maximum single-file size to include (in KB) | `100` |
 | `--stream` | Stream output token-by-token (TTY only) | `false` |
-| `--provider <id>` | LLM provider: `deepseek` \| `openai` \| `moonshot` \| `zhipu` \| `qwen` \| `minimax` \| `xai` \| `siliconflow` | auto-detect |
+| `--provider <id>` | LLM provider: `deepseek` \| `openai` \| `moonshot` \| `zhipu` \| `qwen` \| `minimax` \| `xai` \| `siliconflow` \| `ollama` \| `openrouter` \| `groq` \| `volcengine` \| `gemini` | auto-detect |
 | `--base-url <url>` | Custom OpenAI-compatible endpoint | provider default |
 | `--model <name>` | Model name override | provider default |
 | `--api-key <key>` | API key (prefer env vars) | env var |
+| `--profile <name>` | 使用指定配置 profile（见 Config Profiles） | active profile |
 
 #### `repo-ai-cli commit`
 

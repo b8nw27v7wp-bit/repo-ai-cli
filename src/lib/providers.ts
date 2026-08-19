@@ -12,6 +12,8 @@ export interface Provider {
   apiKeyEnv: string;
   /** 获取 key 的地址（用于错误提示） */
   docsUrl?: string;
+  /** 无需 API key（本地部署，如 Ollama） */
+  optionalApiKey?: boolean;
 }
 
 export const PROVIDERS: Provider[] = [
@@ -79,6 +81,48 @@ export const PROVIDERS: Provider[] = [
     apiKeyEnv: "SILICONFLOW_API_KEY",
     docsUrl: "https://cloud.siliconflow.cn/account/ak",
   },
+  {
+    id: "ollama",
+    name: "Ollama (本地)",
+    defaultBaseUrl: "http://127.0.0.1:11434/v1",
+    defaultModel: "llama3.2",
+    apiKeyEnv: "OLLAMA_API_KEY",
+    docsUrl: "https://ollama.com/",
+    /** 本地部署无需 key */
+    optionalApiKey: true,
+  },
+  {
+    id: "openrouter",
+    name: "OpenRouter",
+    defaultBaseUrl: "https://openrouter.ai/api/v1",
+    defaultModel: "openrouter/auto",
+    apiKeyEnv: "OPENROUTER_API_KEY",
+    docsUrl: "https://openrouter.ai/keys",
+  },
+  {
+    id: "groq",
+    name: "Groq",
+    defaultBaseUrl: "https://api.groq.com/openai/v1",
+    defaultModel: "llama-3.3-70b-versatile",
+    apiKeyEnv: "GROQ_API_KEY",
+    docsUrl: "https://console.groq.com/keys",
+  },
+  {
+    id: "volcengine",
+    name: "火山方舟 (Volcengine Ark)",
+    defaultBaseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+    defaultModel: "doubao-1-5-pro-32k-250115",
+    apiKeyEnv: "VOLCENGINE_API_KEY",
+    docsUrl: "https://console.volcengine.com/ark",
+  },
+  {
+    id: "gemini",
+    name: "Google Gemini (OpenAI 兼容)",
+    defaultBaseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+    defaultModel: "gemini-2.0-flash",
+    apiKeyEnv: "GEMINI_API_KEY",
+    docsUrl: "https://aistudio.google.com/apikey",
+  },
 ];
 
 /** 自定义 OpenAI 兼容端点（LLM_BASE_URL + LLM_API_KEY） */
@@ -142,6 +186,16 @@ export function resolveLLMConfig(input: ResolveInput = {}): ResolvedLLMConfig {
     }
     const apiKey = input.apiKey ?? process.env[p.apiKeyEnv] ?? cfg.apiKey;
     if (!apiKey) {
+      // 本地部署类提供商（Ollama）无需 key，用占位符直连
+      if (p.optionalApiKey) {
+        return {
+          providerId: p.id,
+          providerName: p.name,
+          baseUrl: explicitBaseUrl ?? p.defaultBaseUrl,
+          model: explicitModel ?? p.defaultModel,
+          apiKey: p.id,
+        };
+      }
       throw new Error(
         `provider "${p.id}"（${p.name}）需要设置环境变量 ${p.apiKeyEnv}。\n` +
           `获取 key: ${p.docsUrl ?? "见官方文档"}\n` +

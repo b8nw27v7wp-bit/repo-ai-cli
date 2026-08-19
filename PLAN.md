@@ -320,6 +320,17 @@ jobs:
 - [x] 测试 163 → 173（ask/fix prompt、version）
 - **验收**：`release --json` 正确建议 0.5.0（feat→minor）；`ask`/`fix` 到 LLM 环节正确失败（无 key）
 
+### M14 — v0.6.0 深度拓展：provider 扩展 + profiles + verbose + deps 检查 + badges/contributing
+- [x] **provider 13 家**：+Ollama（本地无 key，`optionalApiKey`）/OpenRouter/Groq/火山方舟/Gemini（OpenAI 兼容）
+- [x] **Profile 多配置**：config.json 新增 `profiles.<name>` + `activeProfile`；`loadConfig(profile)` 合并语义（顶层 ← profile 覆盖）；`config set/unset/get --profile`、`config use`、`config rm-profile`、`config init --profile`；全部 11 个 AI 命令 + withLLMOptions 支持 `--profile`
+- [x] **`--verbose` 全局调试**：`lib/log.ts`（stderr、时间戳），program.hook("preAction") 启用；llm.ts（请求 URL/重试）、github.ts（clone 直连/镜像回退）、npm-checks 埋点；`REPO_AI_VERBOSE=1` 环境变量兜底
+- [x] **`deps --outdated/--audit`**：`lib/npm-checks.ts` 封装 npm outdated/audit（退出码 1 = 有结果的正常情况；Windows 走 `cmd.exe /d /s /c npm` 规避 .cmd EINVAL 与 DEP0190）；友好表格 + JSON
+- [x] **`badges` 命令**：离线检测 git remote/npm name/LICENSE/CI workflow/node engines → 生成 CI/npm/downloads/license/node/stars 徽章（`lib/badges.ts`）
+- [x] **`contributing` 命令**：中/英模板，自动探测 owner/repo、包管理器（lockfile）、test 命令（`lib/contributing.ts`），`--force` 覆盖保护
+- [x] `doctor` 显示激活 profile；命令总数 21 → 23
+- [x] 测试 173 → 210（profiles 13 项 / log 3 / badges 5 / contributing 3 / npm-checks 8 / providers-v2 5 / 原有回归）
+- **验收**：typecheck+lint+test 全绿；CLI 冒烟：profile set/use/list/rm 端到端、badges 对自身仓库生成 6 枚徽章（dogfooding）、contributing --json、deps --outdated/--audit 真实输出（含高危漏洞提示）、--verbose 调试行
+
 ---
 
 ## 11. 未来路线图（做大方向，按优先级排列）
@@ -332,11 +343,11 @@ jobs:
 | ~~P1~~ ✅ | `ask` 命令 | 代码库问答 RAG（已完成，支持 --stream） |
 | ~~P1~~ ✅ | `fix` 命令 | bug 定位 + 修复建议（已完成） |
 | ~~P1~~ ✅ | `release` 命令 | 语义化版本建议 + bump + tag（已完成） |
-| P1 | `badges` / `contributing` 生成 | 扩充 README 之外的项目治理文件生成 |
-| P1 | `deps --outdated` / `--audit` | 封装 npm outdated / npm audit，输出更友好的表格 |
-| P1 | 多 provider 补齐 | 增加 Claude / Gemini / 火山方舟 / 本地 Ollama 等 |
-| P2 | `--verbose` 全局调试 | 统一 debug 日志输出，排查网络/配置问题 |
-| P2 | 配置文件 profile | 多套 provider/model 配置切换（`--profile work`） |
+| ~~P1~~ ✅ | `badges` / `contributing` 生成 | v0.6.0 完成：离线生成 README 徽章与 CONTRIBUTING.md |
+| ~~P1~~ ✅ | `deps --outdated` / `--audit` | v0.6.0 完成：封装 npm outdated / npm audit，友好表格 + CI 退出码 |
+| ~~P1~~ ✅ | 多 provider 补齐 | v0.6.0 完成：+Ollama（本地无 key）/OpenRouter/Groq/火山方舟/Gemini，共 13 家 |
+| ~~P2~~ ✅ | `--verbose` 全局调试 | v0.6.0 完成：统一 debug 日志（stderr），覆盖网络/配置/克隆 |
+| ~~P2~~ ✅ | 配置文件 profile | v0.6.0 完成：多套 provider/model 配置切换（`config use work` / `--profile work`） |
 | P2 | GitHub PR review | `review-pr <url>` 拉取线上 PR 的 diff 做审查 |
 
 ---
@@ -357,7 +368,7 @@ jobs:
 ## 10. 简历条目（预写）
 
 > **repo-ai-cli** — TypeScript CLI 工具（npm 发布，GitHub Actions 自动 CI/CD）
-> 21 条命令覆盖仓库助手全场景：AI 生成双语 README / 规范 commit / CHANGELOG / 代码审查 / 解释 / PR 描述 / 文档翻译 / 单元测试 / 重构建议 / bug 定位 / 代码库问答（RAG），以及离线的密钥扫描 / 环境体检 / .gitignore / LICENSE / 仓库统计 / 依赖解析 / 项目脚手架 / git 钩子 / 语义化版本发布；实现 token 预算控制、.gitignore 感知文件收集、LLM 重试与流式输出、GitHub 仓库浅克隆（含镜像回退）；支持 8+ 家国内外 LLM 提供商（DeepSeek/OpenAI/Kimi/GLM/通义/MiniMax/Grok/硅基流动）及任意 OpenAI 兼容端点；BYOK 零服务端成本；173 单测覆盖核心逻辑。
+> 23 条命令覆盖仓库助手全场景：AI 生成双语 README / 规范 commit / CHANGELOG / 代码审查 / 解释 / PR 描述 / 文档翻译 / 单元测试 / 重构建议 / bug 定位 / 代码库问答（RAG） / README 徽章 / 贡献指南，以及离线的密钥扫描 / 环境体检 / .gitignore / LICENSE / 仓库统计 / 依赖解析（--outdated / --audit）/ 项目脚手架 / git 钩子 / 语义化版本发布；实现 token 预算控制、.gitignore 感知文件收集、LLM 重试与流式输出、GitHub 仓库浅克隆（含镜像回退）、多 profile 配置切换、--verbose 调试日志；支持 13 家国内外 LLM 提供商（DeepSeek/OpenAI/Kimi/GLM/通义/MiniMax/Grok/硅基流动/Ollama 本地/OpenRouter/Groq/火山方舟/Gemini）及任意 OpenAI 兼容端点；BYOK 零服务端成本；210 单测覆盖核心逻辑。
 
 ---
 
