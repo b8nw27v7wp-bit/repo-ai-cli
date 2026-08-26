@@ -46,8 +46,8 @@
 - 🕵️ **Secret Scanning** — `repo-ai-cli secrets` scans your repo offline for hardcoded credentials (GitHub/AWS/Slack/OpenAI/private keys...) with severity ranking and masked output, CI-friendly exit codes.
   **密钥扫描** — `repo-ai-cli secrets` 离线扫描仓库中的硬编码密钥（GitHub/AWS/Slack/OpenAI/私钥等），按严重程度分级、打码输出，可接入 CI。
 
-- 🩺 **Health Check** — `repo-ai-cli doctor` diagnoses your environment (Node version, git repo, config, API key) in one command.
-  **环境体检** — `repo-ai-cli doctor` 一键检查 Node 版本、git 仓库、配置与 API key。
+- 🩺 **Health Check** — `repo-ai-cli doctor` diagnoses your environment in one command: Node version, git repo, config file validity, active profile, per-provider API key status (offline prefix check only, never calls any API), and proxy settings — with actionable fix hints.
+  **环境体检** — `repo-ai-cli doctor` 一键体检：Node 版本、git 仓库、配置文件合法性、激活 profile、各 provider API key 状态（仅离线检查非空与前缀，绝不真实调用 API）、网络代理，并附修复建议。
 
 - 📄 **Scaffolding Utilities** — `gitignore` (16 bundled language templates), `license` (6 OSS licenses), `stats` (LOC/language/commit stats) and `deps` (dependency listing) — all offline.
   **脚手架工具集** — `gitignore`（16 套语言模板）、`license`（6 套开源许可）、`stats`（行数/语言/提交统计）、`deps`（依赖清单）—— 全离线。
@@ -329,7 +329,19 @@ repo-ai-cli doctor
 
 # Machine-readable
 repo-ai-cli doctor --json
+
+# Exit code 1 when any check fails (CI-friendly)
+repo-ai-cli doctor; echo $?
 ```
+
+Checks: Node.js version, git repo, config file validity, active profile,
+per-provider API key status (offline only — non-empty + known prefix, never
+calls an API), and proxy environment variables. Non-passing items come with
+fix hints.
+
+检查项：Node 版本、git 仓库、配置文件合法性（坏 JSON 明确报错）、激活
+profile、各 provider API key 状态（纯离线：非空 + 已知前缀，绝不真实调用
+API）、网络代理环境变量。未通过项附修复建议。
 
 ### Repo Utilities — 仓库工具
 
@@ -605,7 +617,10 @@ repo-ai-cli init my-cli --json
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--json` | Output machine-readable JSON | `false` |
+| `--json` | Output machine-readable JSON (exits 1 if any check fails) | `false` |
+
+Checks: Node.js version, git repo, config file validity, active profile,
+per-provider API key status (offline), proxy env vars. Fix hints included.
 
 #### `repo-ai-cli gitignore`
 
