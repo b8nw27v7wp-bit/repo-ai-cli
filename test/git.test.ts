@@ -3,7 +3,7 @@ import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { getDiff, getLog, assertInGitRepo, GitError, detectBaseBranch, getBranchDiff, getCurrentBranch, getLatestTag } from "../src/lib/git.js";
+import { getDiff, getLog, assertInGitRepo, GitError, detectBaseBranch, getBranchDiff, getCurrentBranch, getLatestTag, tagExists } from "../src/lib/git.js";
 
 let repo: string;
 
@@ -151,6 +151,73 @@ describe("分支助手", () => {
       expect(res.files).not.toContain("untracked-yzx.txt");
     } finally {
       await rm(path.join(repo, "untracked-yzx.txt"), { force: true });
+    }
+  });
+});
+
+describe("getDiff 统一预算", () => {
+  let r2: string;
+
+  beforeAll(async () => {
+    r2 = await mkdtemp(path.join(os.tmpdir(), "repo-ai-budget-"));
+    git(["init", "-b", "main"], r2);
+    git(["config", "user.email", "test@test.com"], r2);
+    git(["config", "user.name", "test"], r2);
+    await writeFile(path.join(r2, "a.ts"), "export const a = 1;\n");
+    git(["add", "."], r2);
+    git(["commit", "-m", "init"], r2);
+  });
+
+  afterAll(async () => {
+    await rm(r2, { recursive: true, force: true });
+  });
+
+  it("tracked 占满后不再追加 untracked，并标记截断", async () => {
+    await writeFile(
+      path.join(r2, "a.ts"),
+      Array.from({ length: 100 }, (_, i) => `export const a${i} = ${i};`).join("\n") + "\n",
+    );
+    await writeFile(path.join(r2, "big-untracked.txt"), `${"y".repeat(5000)}\n`);
+    try {
+      const res = await getDiff(r2, { all: true, maxBytes: 128 });
+      expect(res.truncated).toBe(true);
+      expect(res.files).not.toContain("big-untracked.txt");
+      // 输出总量受预算约束（含截断标注开销），远小于旧逻辑的 2 倍预算
+      expect(Buffer.byteLength(res.diff, "utf8")).toBeLessThan(128 * 4);
+    } finally {
+      await rm(path.join(r2, "big-untracked.txt"), { force: true });
+      await writeFile(path.join(r2, "a.ts"), "export const a = 1;\n");
+    }
+  });
+
+  it("tracked 未占满时 untracked 正常追加", async () => {
+    await writeFile(path.join(r2, "small-untracked.txt"), "hello\n");
+    try {
+      const res = await getDiff(r2, { all: true });
+      expect(res.files).toContain("small-untracked.txt");
+      expect(res.diff).toContain("new file mode 100644");
+      expect(res.truncated).toBe(false);
+    } finally {
+      await rm(path.join(r2, "small-untracked.txt"), { force: true });
+    }
+  });
+});
+
+describe("tagExists", () => {
+  it("存在的 tag 返回 true，不存在的返回 false", async () => {
+    const r3 = await mkdtemp(path.join(os.tmpdir(), "repo-ai-tag-"));
+    try {
+      git(["init", "-b", "main"], r3);
+      git(["config", "user.email", "test@test.com"], r3);
+      git(["config", "user.name", "test"], r3);
+      await writeFile(path.join(r3, "a.txt"), "x\n");
+      git(["add", "."], r3);
+      git(["commit", "-m", "init"], r3);
+      await expect(tagExists(r3, "v9.9.9")).resolves.toBe(false);
+      git(["tag", "v9.9.9"], r3);
+      await expect(tagExists(r3, "v9.9.9")).resolves.toBe(true);
+    } finally {
+      await rm(r3, { recursive: true, force: true });
     }
   });
 });

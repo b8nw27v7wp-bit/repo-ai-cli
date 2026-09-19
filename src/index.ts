@@ -36,6 +36,7 @@ import {
   runConfigRemoveProfile,
 } from "./commands/config.js";
 import { setVerbose } from "./lib/log.js";
+import { intOption, temperatureOption } from "./lib/options.js";
 import pkg from "../package.json" with { type: "json" };
 
 const program = new Command();
@@ -85,10 +86,10 @@ const readmeCmd = withLLMOptions(
       "bilingual",
     )
     .option("--dry-run", "print stats only, do not call API")
-    .option("--max-tokens <n>", "token budget", (v) => parseInt(v, 10), 48000)
-    .option("--max-file-kb <n>", "max single-file size in KB", (v) => parseInt(v, 10), 100)
-    .option("--max-output-tokens <n>", "max LLM output tokens", (v) => parseInt(v, 10), 8192)
-    .option("--temperature <n>", "sampling temperature 0~2", (v) => parseFloat(v), 0.7)
+    .option("--max-tokens <n>", "token budget", intOption(), 48000)
+    .option("--max-file-kb <n>", "max single-file size in KB", intOption(), 100)
+    .option("--max-output-tokens <n>", "max LLM output tokens", intOption(), 8192)
+    .option("--temperature <n>", "sampling temperature 0~2", temperatureOption(), 0.7)
     .option("--stream", "stream output token by token (TTY only)")
     .option("--json", "output machine-readable JSON"),
 );
@@ -126,9 +127,9 @@ const commitCmd = withLLMOptions(
     .option("--print", "print message without interaction")
     .option("--json", "output machine-readable JSON")
     .option("--type <type>", "force commit type (feat/fix/docs/...)")
-    .option("--max-diff-kb <n>", "max diff size in KB", (v) => parseInt(v, 10), 200)
-    .option("--max-output-tokens <n>", "max LLM output tokens", (v) => parseInt(v, 10), 1024)
-    .option("--temperature <n>", "sampling temperature 0~2", (v) => parseFloat(v), 0.3),
+    .option("--max-diff-kb <n>", "max diff size in KB", intOption(), 200)
+    .option("--max-output-tokens <n>", "max LLM output tokens", intOption(), 1024)
+    .option("--temperature <n>", "sampling temperature 0~2", temperatureOption(), 0.3),
 );
 
 commitCmd.action(async (opts: Record<string, unknown>) => {
@@ -159,13 +160,13 @@ const changelogCmd = withLLMOptions(
     .description("Generate a CHANGELOG.md from git log (since last tag by default)")
     .option("-o, --output <file>", "output file", "CHANGELOG.md")
     .option("-r, --range <range>", "git range (v1.0.0.. / ..HEAD / 1.0.0..2.0.0); default: last tag..HEAD")
-    .option("-n, --max <n>", "max commits to consider", (v) => parseInt(v, 10), 50)
+    .option("-n, --max <n>", "max commits to consider", intOption(), 50)
     .option("-l, --language <lang>", "zh | en", "zh")
     .option("--dry-run", "print stats only, do not call API")
     .option("--print", "print changelog without writing file")
     .option("--json", "output machine-readable JSON")
-    .option("--max-output-tokens <n>", "max LLM output tokens", (v) => parseInt(v, 10), 4096)
-    .option("--temperature <n>", "sampling temperature 0~2", (v) => parseFloat(v), 0.5)
+    .option("--max-output-tokens <n>", "max LLM output tokens", intOption(), 4096)
+    .option("--temperature <n>", "sampling temperature 0~2", temperatureOption(), 0.5)
     .option("--stream", "stream output token by token (TTY only)"),
 );
 
@@ -200,11 +201,11 @@ const reviewCmd = withLLMOptions(
     .option("--staged", "use staged changes (default)", true)
     .option("--all", "include unstaged changes")
     .option("-o, --output <file>", "write review to file (default: stdout)")
-    .option("--focus <area>", "bug|security|style|perf|all", "all")
+    .option("--focus <area>", "bugs|security|style|perf|all", "all")
     .option("--json", "output machine-readable JSON")
-    .option("--max-diff-kb <n>", "max diff size in KB", (v) => parseInt(v, 10), 200)
-    .option("--max-output-tokens <n>", "max LLM output tokens", (v) => parseInt(v, 10), 4096)
-    .option("--temperature <n>", "sampling temperature 0~2", (v) => parseFloat(v), 0.3),
+    .option("--max-diff-kb <n>", "max diff size in KB", intOption(), 200)
+    .option("--max-output-tokens <n>", "max LLM output tokens", intOption(), 4096)
+    .option("--temperature <n>", "sampling temperature 0~2", temperatureOption(), 0.3),
 );
 
 reviewCmd.action(async (opts: Record<string, unknown>) => {
@@ -235,10 +236,10 @@ const explainCmd = withLLMOptions(
     .description("Explain a file or code region (file[:line] / file#symbol)")
     .argument("<file-or-region>", "file path, optionally with :line / :start-end / #symbol")
     .option("-l, --language <lang>", "zh | en | bilingual", "zh")
-    .option("--max-file-kb <n>", "max file size in KB", (v) => parseInt(v, 10), 200)
+    .option("--max-file-kb <n>", "max file size in KB", intOption(), 200)
     .option("--json", "output machine-readable JSON")
-    .option("--max-output-tokens <n>", "max LLM output tokens", (v) => parseInt(v, 10), 2048)
-    .option("--temperature <n>", "sampling temperature 0~2", (v) => parseFloat(v), 0.3),
+    .option("--max-output-tokens <n>", "max LLM output tokens", intOption(), 2048)
+    .option("--temperature <n>", "sampling temperature 0~2", temperatureOption(), 0.3),
 );
 
 explainCmd.action(async (target: string, opts: Record<string, unknown>) => {
@@ -268,9 +269,9 @@ const prCmd = withLLMOptions(
     .option("--base <branch>", "base branch (default: auto-detect origin/HEAD)", undefined)
     .option("--create", "create the PR via gh pr create after generating")
     .option("--json", "output machine-readable JSON")
-    .option("--max-diff-kb <n>", "max diff size in KB", (v) => parseInt(v, 10), 200)
-    .option("--max-output-tokens <n>", "max LLM output tokens", (v) => parseInt(v, 10), 4096)
-    .option("--temperature <n>", "sampling temperature 0~2", (v) => parseFloat(v), 0.5),
+    .option("--max-diff-kb <n>", "max diff size in KB", intOption(), 200)
+    .option("--max-output-tokens <n>", "max LLM output tokens", intOption(), 4096)
+    .option("--temperature <n>", "sampling temperature 0~2", temperatureOption(), 0.5),
 );
 
 prCmd.action(async (opts: Record<string, unknown>) => {
@@ -319,7 +320,7 @@ const secretsCmd = program
   .description("Scan for hardcoded secrets/credentials in a directory (offline)")
   .argument("[path]", "directory to scan (default: current dir)", ".")
   .option("--severity <level>", "critical | high | medium", "medium")
-  .option("--max-file-kb <n>", "max file size to scan in KB", (v) => parseInt(v, 10), 200)
+  .option("--max-file-kb <n>", "max file size to scan in KB", intOption(), 200)
   .option("--json", "output machine-readable JSON");
 
 secretsCmd.action(async (target: string, opts: Record<string, unknown>) => {
@@ -432,10 +433,10 @@ const translateCmd = withLLMOptions(
     .argument("<file>", "markdown/doc file to translate")
     .option("--to <lang>", "zh | en | bilingual", "en")
     .option("-o, --output <file>", "write to file (default: stdout)")
-    .option("--max-file-kb <n>", "max file size in KB", (v) => parseInt(v, 10), 200)
+    .option("--max-file-kb <n>", "max file size in KB", intOption(), 200)
     .option("--json", "output machine-readable JSON")
-    .option("--max-output-tokens <n>", "max LLM output tokens", (v) => parseInt(v, 10), 8192)
-    .option("--temperature <n>", "sampling temperature 0~2", (v) => parseFloat(v), 0.3),
+    .option("--max-output-tokens <n>", "max LLM output tokens", intOption(), 8192)
+    .option("--temperature <n>", "sampling temperature 0~2", temperatureOption(), 0.3),
 );
 
 translateCmd.action(async (file: string, opts: Record<string, unknown>) => {
@@ -466,10 +467,10 @@ const testCmd = withLLMOptions(
     .argument("<file>", "source file to generate tests for")
     .option("--framework <name>", "vitest | jest | node-test", "vitest")
     .option("-o, --output <file>", "write tests to file (default: stdout)")
-    .option("--max-file-kb <n>", "max file size in KB", (v) => parseInt(v, 10), 200)
+    .option("--max-file-kb <n>", "max file size in KB", intOption(), 200)
     .option("--json", "output machine-readable JSON")
-    .option("--max-output-tokens <n>", "max LLM output tokens", (v) => parseInt(v, 10), 4096)
-    .option("--temperature <n>", "sampling temperature 0~2", (v) => parseFloat(v), 0.3),
+    .option("--max-output-tokens <n>", "max LLM output tokens", intOption(), 4096)
+    .option("--temperature <n>", "sampling temperature 0~2", temperatureOption(), 0.3),
 );
 
 testCmd.action(async (file: string, opts: Record<string, unknown>) => {
@@ -500,10 +501,10 @@ const refactorCmd = withLLMOptions(
     .argument("<file>", "file to analyze")
     .option("--focus <dim>", "all | readability | perf | complexity | types", "all")
     .option("-o, --output <file>", "write suggestions to file (default: stdout)")
-    .option("--max-file-kb <n>", "max file size in KB", (v) => parseInt(v, 10), 200)
+    .option("--max-file-kb <n>", "max file size in KB", intOption(), 200)
     .option("--json", "output machine-readable JSON")
-    .option("--max-output-tokens <n>", "max LLM output tokens", (v) => parseInt(v, 10), 4096)
-    .option("--temperature <n>", "sampling temperature 0~2", (v) => parseFloat(v), 0.3),
+    .option("--max-output-tokens <n>", "max LLM output tokens", intOption(), 4096)
+    .option("--temperature <n>", "sampling temperature 0~2", temperatureOption(), 0.3),
 );
 
 refactorCmd.action(async (file: string, opts: Record<string, unknown>) => {
@@ -575,12 +576,12 @@ const askCmd = withLLMOptions(
     .command("ask")
     .description("Ask a question about the current codebase (RAG)")
     .argument("<question...>", "your question about this repository")
-    .option("--max-tokens <n>", "token budget for collected files", (v) => parseInt(v, 10), 48000)
-    .option("--max-file-kb <n>", "max single-file size in KB", (v) => parseInt(v, 10), 100)
+    .option("--max-tokens <n>", "token budget for collected files", intOption(), 48000)
+    .option("--max-file-kb <n>", "max single-file size in KB", intOption(), 100)
     .option("--stream", "stream answer token by token (TTY only)")
     .option("--json", "output machine-readable JSON")
-    .option("--max-output-tokens <n>", "max LLM output tokens", (v) => parseInt(v, 10), 2048)
-    .option("--temperature <n>", "sampling temperature 0~2", (v) => parseFloat(v), 0.3),
+    .option("--max-output-tokens <n>", "max LLM output tokens", intOption(), 2048)
+    .option("--temperature <n>", "sampling temperature 0~2", temperatureOption(), 0.3),
 );
 
 askCmd.action(async (question: string[], opts: Record<string, unknown>) => {
@@ -609,11 +610,11 @@ const fixCmd = withLLMOptions(
     .command("fix")
     .description("Locate the root cause of a bug and suggest a fix (AI)")
     .argument("<description...>", "bug description / error message")
-    .option("--max-tokens <n>", "token budget for collected files", (v) => parseInt(v, 10), 48000)
-    .option("--max-file-kb <n>", "max single-file size in KB", (v) => parseInt(v, 10), 100)
+    .option("--max-tokens <n>", "token budget for collected files", intOption(), 48000)
+    .option("--max-file-kb <n>", "max single-file size in KB", intOption(), 100)
     .option("--json", "output machine-readable JSON")
-    .option("--max-output-tokens <n>", "max LLM output tokens", (v) => parseInt(v, 10), 4096)
-    .option("--temperature <n>", "sampling temperature 0~2", (v) => parseFloat(v), 0.3),
+    .option("--max-output-tokens <n>", "max LLM output tokens", intOption(), 4096)
+    .option("--temperature <n>", "sampling temperature 0~2", temperatureOption(), 0.3),
 );
 
 fixCmd.action(async (description: string[], opts: Record<string, unknown>) => {

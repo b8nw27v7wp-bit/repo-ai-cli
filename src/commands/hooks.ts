@@ -68,10 +68,14 @@ export async function runHooksUninstall(options: HooksOptions): Promise<void> {
 
   const res = await uninstallHook(process.cwd(), name);
   if (isJsonMode()) {
-    emitJson({ ok: true, hook: name, removed: res.removed });
+    emitJson({ ok: true, hook: name, removed: res.removed, restored: res.restored ?? null });
     return;
   }
-  done(res.removed ? `已卸载 ${name}: ${res.path}` : `未找到本工具安装的 ${name}，无需卸载`);
+  done(
+    res.removed
+      ? `已卸载 ${name}: ${res.path}${res.restored ? "（已恢复备份）" : ""}`
+      : `未找到本工具安装的 ${name}，无需卸载`,
+  );
 }
 
 /** repo-ai hooks list — 查看钩子安装状态 */

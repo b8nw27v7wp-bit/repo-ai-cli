@@ -1,7 +1,7 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import { intro } from "@clack/prompts";
 import { chatCompletion, llmConfigFromOptions } from "../lib/llm.js";
+import { readTextCapped } from "../lib/options.js";
 import { buildTestPrompt, type TestFramework } from "../prompts/test.js";
 import { loadConfig } from "../lib/config.js";
 import { writeOutput } from "../lib/output.js";
@@ -10,6 +10,7 @@ import {
   setJsonMode,
   isJsonMode,
   emitJson,
+  warn,
   done,
   fail,
   progress,
@@ -34,16 +35,6 @@ export async function runTest(options: TestOptions): Promise<void> {
   if (interactive && !isJsonMode()) intro("repo-ai test");
 
   const abs = path.resolve(options.file);
-  let raw: string;
-  try {
-    raw = await fs.readFile(abs, "utf8");
-  } catch (err) {
-    fail(
-      `无法读取文件: ${options.file}（${err instanceof Error ? err.message : "不存在或不可读"}）`,
-    );
-    return;
-  }
-
   const framework = normalizeFramework(options.framework);
   if (!framework) {
     fail(`未知框架: ${options.framework}。可用: ${FRAMEWORKS.join("/")}`);
@@ -51,12 +42,17 @@ export async function runTest(options: TestOptions): Promise<void> {
   }
 
   const maxBytes = (options.maxFileKb ?? 200) * 1024;
-  let content = raw;
-  let truncated = false;
-  if (Buffer.byteLength(raw, "utf8") > maxBytes) {
-    content = Buffer.from(raw, "utf8").subarray(0, maxBytes).toString("utf8");
-    truncated = true;
+  let content: string;
+  let truncated: boolean;
+  try {
+    ({ content, truncated } = await readTextCapped(abs, maxBytes));
+  } catch (err) {
+    fail(
+      `无法读取文件: ${options.file}（${err instanceof Error ? err.message : "不存在或不可读"}）`,
+    );
+    return;
   }
+  if (truncated) warn(`文件过大已截断，只依据前 ${(maxBytes / 1024).toFixed(0)} KB 生成`);
 
   const progressBar = progress("AI 生成单元测试中...");
   const relPath = path.relative(process.cwd(), abs).replaceAll("\\", "/") || options.file;

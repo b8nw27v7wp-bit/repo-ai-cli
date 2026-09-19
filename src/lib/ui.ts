@@ -3,6 +3,9 @@ import { outro, spinner, log } from "@clack/prompts";
 /**
  * 统一 UI 辅助：TTY 用 clack（spinner/outro/log.info），非 TTY / --json 降级为纯文本。
  * 所有命令共用一份实现，避免重复。
+ *
+ * 输出约定：stdout 只承载最终产物（JSON / 生成内容 / 裸值）；
+ * 状态、提示、进度一律走 stderr（TTY 下 clack 自行渲染），避免污染管道。
  */
 
 /** 非 TTY（管道/CI）时 clack 的 spinner 会疯狂重绘，降级为普通日志 */
@@ -23,17 +26,17 @@ export function emitJson(obj: Record<string, unknown>): void {
   console.log(JSON.stringify(obj));
 }
 
-/** 信息行：JSON 模式静默 */
+/** 信息行：JSON 模式静默；非 TTY 走 stderr，保证 stdout 纯净 */
 export function say(msg: string): void {
   if (jsonMode) return;
   if (interactive) log.info(msg);
-  else console.log(msg);
+  else console.error(msg);
 }
 
 export function done(msg: string): void {
   if (jsonMode) return;
   if (interactive) outro(`✓ ${msg}`);
-  else console.log(`✓ ${msg}`);
+  else console.error(`✓ ${msg}`);
 }
 
 /** 警告：JSON 模式静默，TTY 用 clack log.warn，否则走 stderr */
@@ -79,15 +82,15 @@ export function progress(label: string): Progress {
       },
     };
   }
-  if (!jsonMode) console.log(`... ${label}`);
+  if (!jsonMode) console.error(`... ${label}`);
   return {
     update(next: string) {
       current = next;
-      if (!jsonMode) console.log(`... ${next}`);
+      if (!jsonMode) console.error(`... ${next}`);
     },
     stop(msg?: string) {
       // 无参 stop 不重复打印（update 已打过最新状态）
-      if (msg && !jsonMode) console.log(`... ${msg}`);
+      if (msg && !jsonMode) console.error(`... ${msg}`);
     },
   };
 }

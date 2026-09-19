@@ -100,8 +100,8 @@
 - 🏅 **Badges & Contributing Generators** — `badges` detects your CI workflow / npm package / license / node engines and emits ready-to-paste README badges; `contributing` scaffolds a zh/en CONTRIBUTING.md with your repo details auto-filled.
   **徽章与贡献指南生成** — `badges` 自动探测 CI workflow / npm 包 / LICENSE / Node 版本并生成可直接粘贴的 README 徽章；`contributing` 生成中英双语 CONTRIBUTING.md 并自动填充仓库信息。
 
-- 🧪 **Comprehensive Testing** — 210+ unit and end-to-end tests covering file filtering, token budgeting, git integration, LLM error handling (incl. streaming), secret scanning, semantic versioning, provider resolution, config profiles, git hooks, npm audit parsing, badge/contributing generation, and more.
-  **全面测试覆盖** — 210+ 单元测试与端到端测试，覆盖文件过滤、Token 预算、Git 集成、LLM 错误处理（含流式）、密钥扫描、语义化版本、提供商解析、配置 Profile、git 钩子、npm 审计解析、徽章/贡献指南生成等核心逻辑。
+- 🧪 **Comprehensive Testing** — 236+ unit and end-to-end tests covering file filtering, token budgeting, git integration, LLM error handling (incl. streaming), secret scanning, semantic versioning, provider resolution, config profiles, git hooks, npm audit parsing, badge/contributing generation, option validation, UI output hygiene, and more.
+  **全面测试覆盖** — 236+ 单元测试与端到端测试，覆盖文件过滤、Token 预算、Git 集成、LLM 错误处理（含流式）、密钥扫描、语义化版本、提供商解析、配置 Profile、git 钩子、npm 审计解析、徽章/贡献指南生成、参数校验、输出纯净等核心逻辑。
 
 ---
 
@@ -732,6 +732,22 @@ per-provider API key status (offline), proxy env vars. Fix hints included.
 |--------|-------------|---------|
 | `--bump <level>` | `major` \| `minor` \| `patch` \| `auto`（给出则实际修改版本） | suggest only |
 | `--tag` | Create a git tag after `--bump` | `false` |
+| `--json` | Output machine-readable JSON | `false` |
+
+#### `repo-ai-cli badges`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-o, --output <file>` | Write badges to file (default: stdout) | stdout |
+| `--json` | Output machine-readable JSON | `false` |
+
+#### `repo-ai-cli contributing`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-o, --output <file>` | Output file | `CONTRIBUTING.md` |
+| `-l, --language <lang>` | `zh` \| `en` | `zh` |
+| `-f, --force` | Overwrite existing file | `false` |
 | `--json` | Output machine-readable JSON | `false` |
 
 #### `repo-ai-cli config`
