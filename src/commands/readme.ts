@@ -5,7 +5,8 @@ import { collectFiles } from "../lib/collect-files.js";
 import { buildFileTree } from "../lib/file-tree.js";
 import { allocateBudget, estimateTokens } from "../lib/token-budget.js";
 import { chatCompletion, streamChatCompletion, llmConfigFromOptions } from "../lib/llm.js";
-import { buildReadmePrompt, type ReadmeLanguage } from "../prompts/readme.js";
+import { buildReadmePrompt } from "../prompts/readme.js";
+import { parseEnum } from "../lib/options.js";
 import { writeOutput } from "../lib/output.js";
 import { parseGithubRef, cloneRepo } from "../lib/github.js";
 import { loadConfig } from "../lib/config.js";
@@ -113,7 +114,16 @@ export async function runReadme(options: ReadmeOptions): Promise<void> {
     });
 
     const repoName = path.basename(workDir);
-    const language = options.language as ReadmeLanguage;
+    const language = parseEnum(
+      options.language,
+      ["bilingual", "zh", "en"] as const,
+      "language",
+      "bilingual",
+    );
+    if (!language) {
+      progressBar.stop();
+      return;
+    }
 
     if (options.dryRun) {
       const included = budget.files.filter((f) => f.mode !== "skip");

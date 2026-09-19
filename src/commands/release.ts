@@ -1,11 +1,12 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { intro } from "@clack/prompts";
-import { getLog, getLatestTag, assertInGitRepo, createTag } from "../lib/git.js";
+import { getLog, getLatestTag, assertInGitRepo, createTag, tagExists } from "../lib/git.js";
 import {
   suggestNextVersion,
   computeNext,
   bumpPackageVersion,
+  parseSemver,
   type BumpLevel,
 } from "../lib/version.js";
 import {
@@ -63,6 +64,11 @@ export async function runRelease(options: ReleaseOptions): Promise<void> {
   }
 
   const current = await currentVersion(cwd);
+  if (!parseSemver(current)) {
+    p.stop();
+    fail(`package.json 版本号非法: ${current}（需要 x.y.z 格式）`);
+    return;
+  }
   const suggestion = suggestNextVersion(commits, current);
   p.stop();
 
@@ -104,11 +110,19 @@ export async function runRelease(options: ReleaseOptions): Promise<void> {
 
   const next = level === suggestion.level ? suggestion.next : computeNext(current, level);
   const files = await bumpPackageVersion(cwd, next);
+  if (!files.packageJson) {
+    fail("当前目录没有 package.json，无法 bump 版本");
+    return;
+  }
 
   let tagName: string | null = null;
   if (options.tag) {
+    tagName = `v${next}`;
+    if (await tagExists(cwd, tagName)) {
+      fail(`tag 已存在: ${tagName}（先删除或换版本号）`);
+      return;
+    }
     try {
-      tagName = `v${next}`;
       await createTag(cwd, tagName, `release ${tagName}`);
     } catch (err) {
       fail((err as Error).message);

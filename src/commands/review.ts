@@ -1,12 +1,9 @@
 import { intro } from "@clack/prompts";
 import { getDiff, assertInGitRepo } from "../lib/git.js";
 import { chatCompletion, llmConfigFromOptions } from "../lib/llm.js";
-import {
-  buildReviewPrompt,
-  REVIEW_FOCUSES,
-  type ReviewFocus,
-} from "../prompts/review.js";
+import { buildReviewPrompt, REVIEW_FOCUSES } from "../prompts/review.js";
 import { loadConfig } from "../lib/config.js";
+import { parseEnum } from "../lib/options.js";
 import { writeOutput } from "../lib/output.js";
 import {
   interactive,
@@ -63,15 +60,8 @@ export async function runReview(options: ReviewOptions): Promise<void> {
     warn("diff 过大已截断，审查可能不完整");
   }
 
-  const focus = REVIEW_FOCUSES.includes(options.focus as ReviewFocus)
-    ? (options.focus as ReviewFocus)
-    : "all";
-  if (options.focus && focus === "all" && options.focus !== "all") {
-    fail(
-      `未知 focus: ${options.focus}。可用: ${REVIEW_FOCUSES.join("/")}`,
-    );
-    return;
-  }
+  const focus = parseEnum(options.focus, REVIEW_FOCUSES, "focus", "all");
+  if (!focus) return;
 
   // 2. 生成
   const progressBar = progress("AI 代码审查中...");

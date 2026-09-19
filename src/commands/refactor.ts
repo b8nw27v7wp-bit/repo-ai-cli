@@ -1,11 +1,12 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import { intro } from "@clack/prompts";
 import { chatCompletion, llmConfigFromOptions } from "../lib/llm.js";
+import { readTextCapped } from "../lib/options.js";
 import {
   buildRefactorPrompt,
   type RefactorFocus,
 } from "../prompts/refactor.js";
+import { parseEnum } from "../lib/options.js";
 import { loadConfig } from "../lib/config.js";
 import { writeOutput } from "../lib/output.js";
 import {
@@ -13,6 +14,7 @@ import {
   setJsonMode,
   isJsonMode,
   emitJson,
+  warn,
   done,
   fail,
   progress,
@@ -37,31 +39,21 @@ export async function runRefactor(options: RefactorOptions): Promise<void> {
   if (interactive && !isJsonMode()) intro("repo-ai refactor");
 
   const abs = path.resolve(options.file);
-  let raw: string;
+  const maxBytes = (options.maxFileKb ?? 200) * 1024;
+  let content: string;
+  let truncated: boolean;
   try {
-    raw = await fs.readFile(abs, "utf8");
+    ({ content, truncated } = await readTextCapped(abs, maxBytes));
   } catch (err) {
     fail(
       `无法读取文件: ${options.file}（${err instanceof Error ? err.message : "不存在或不可读"}）`,
     );
     return;
   }
+  if (truncated) warn(`文件过大已截断，只分析前 ${(maxBytes / 1024).toFixed(0)} KB`);
 
-  const focus = FOCUSES.includes(options.focus as RefactorFocus)
-    ? (options.focus as RefactorFocus)
-    : "all";
-  if (options.focus && focus === "all" && options.focus !== "all") {
-    fail(`未知 focus: ${options.focus}。可用: ${FOCUSES.join("/")}`);
-    return;
-  }
-
-  const maxBytes = (options.maxFileKb ?? 200) * 1024;
-  let content = raw;
-  let truncated = false;
-  if (Buffer.byteLength(raw, "utf8") > maxBytes) {
-    content = Buffer.from(raw, "utf8").subarray(0, maxBytes).toString("utf8");
-    truncated = true;
-  }
+  const focus = parseEnum(options.focus, FOCUSES, "focus", "all");
+  if (!focus) return;
 
   const progressBar = progress("AI 分析重构中...");
   const relPath = path.relative(process.cwd(), abs).replaceAll("\\", "/") || options.file;

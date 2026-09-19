@@ -331,6 +331,20 @@ jobs:
 - [x] 测试 173 → 210（profiles 13 项 / log 3 / badges 5 / contributing 3 / npm-checks 8 / providers-v2 5 / 原有回归）
 - **验收**：typecheck+lint+test 全绿；CLI 冒烟：profile set/use/list/rm 端到端、badges 对自身仓库生成 6 枚徽章（dogfooding）、contributing --json、deps --outdated/--audit 真实输出（含高危漏洞提示）、--verbose 调试行
 
+### M15 — 优化收敛：参数校验 + 输出纯净 + 预算会计 + 文档 CI
+- [x] `src/lib/options.ts`：`intOption`/`temperatureOption`（commander 解析期拒绝非法值，不再有 NaN 透传）、`parseEnum`（JSON 感知枚举校验）、`readTextCapped`（行边界截断）
+- [x] `review --focus` 帮助文案 `bug`→`bugs`，与实现/测试/README 对齐
+- [x] `secrets --json` 命中补退出码 1；`config set --provider` 非法值走 JSON 错误分支且不再落盘
+- [x] `getDiff --all` 统一预算池：tracked 耗尽后不再追加 untracked；合并后重算 `truncated`；`files` 从最终输出重解析
+- [x] stdout 纯净化：`say`/`done`/非 TTY progress 改走 stderr；`commit` 非 TTY 只打印 message；`commit` 重生成改用 `progress`
+- [x] 各命令 language/focus/severity/target 迁移到 `parseEnum`（readme/changelog/explain/contributing/review/secrets/refactor/translate）
+- [x] `release` 严格校验：非法 semver、`--bump` 无 package.json、tag 已存在均明确 fail；`computeNext` 非法输入回退 0.0.0
+- [x] hooks 时间戳备份 + `uninstall` 恢复最新备份
+- [x] `test`/`translate`/`refactor` 改用 `readTextCapped` + `warn()`
+- [x] `scripts/check-docs.mjs` + `npm run docs:check` + CI 接入；补齐 README `badges`/`contributing` 选项表
+- [x] 测试 210 → 236（options 7 / ui 2 / secrets 命令 1 / git 预算+tag 3 / hooks 备份恢复 2 / version 回退 1 / config provider JSON 1）
+- **验收**：typecheck+lint+test+build+docs:check 全绿；CLI 冒烟：`--max-tokens abc` 报 usage 错误、`secrets --json` 命中退出码 1、`hooks` 安装/备份/恢复
+
 ---
 
 ## 11. 未来路线图（做大方向，按优先级排列）

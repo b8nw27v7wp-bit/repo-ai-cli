@@ -41,7 +41,7 @@ async function isOwnHook(abs: string): Promise<boolean> {
   }
 }
 
-/** 安装钩子：已存在且非本工具时备份为 .bak，避免覆盖用户脚本 */
+/** 安装钩子：已存在且非本工具时备份为 .bak.<时间戳>，避免覆盖用户脚本 */
 export async function installHook(
   cwd: string,
   name: SupportedHook,
@@ -54,7 +54,7 @@ export async function installHook(
   try {
     const existing = await fs.readFile(abs, "utf8");
     if (!existing.includes(HOOK_MARKER)) {
-      const bak = `${abs}.bak`;
+      const bak = `${abs}.bak.${Date.now()}`;
       await fs.writeFile(bak, existing, "utf8");
       backedUp = bak;
     }
@@ -71,15 +71,43 @@ export async function installHook(
   return { path: abs, backedUp };
 }
 
-/** 卸载本工具安装的钩子（不含 marker 的用户钩子不删除） */
+/** 列出某钩子的全部备份（按时间戳倒序） */
+async function listBackups(abs: string): Promise<string[]> {
+  const dir = path.dirname(abs);
+  const base = path.basename(abs);
+  try {
+    const entries = await fs.readdir(dir);
+    return entries
+      .filter((e) => e.startsWith(`${base}.bak.`))
+      .map((e) => path.join(dir, e))
+      .sort()
+      .reverse();
+  } catch {
+    return [];
+  }
+}
+
+/** 卸载本工具安装的钩子（不含 marker 的用户钩子不删除）；有备份则恢复最新一份 */
 export async function uninstallHook(
   cwd: string,
   name: SupportedHook,
-): Promise<{ path: string; removed: boolean }> {
+): Promise<{ path: string; removed: boolean; restored?: string }> {
   const abs = await hookPath(cwd, name);
   try {
     if (await isOwnHook(abs)) {
       await fs.unlink(abs);
+      const [latest] = await listBackups(abs);
+      if (latest) {
+        const raw = await fs.readFile(latest, "utf8");
+        await fs.writeFile(abs, raw, "utf8");
+        try {
+          await fs.chmod(abs, 0o755);
+        } catch {
+          /* Windows 无 POSIX 权限，忽略 */
+        }
+        await fs.unlink(latest).catch(() => {});
+        return { path: abs, removed: true, restored: abs };
+      }
       return { path: abs, removed: true };
     }
   } catch {

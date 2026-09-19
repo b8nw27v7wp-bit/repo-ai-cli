@@ -22,7 +22,8 @@ export function parseSemver(
 }
 
 export function computeNext(current: string, level: BumpLevel): string {
-  const cur = parseSemver(current) ?? { major: 0, minor: 1, patch: 0 };
+  // 非法输入回退到 0.0.0 基准（调用方 release 会先严格校验并 fail）
+  const cur = parseSemver(current) ?? { major: 0, minor: 0, patch: 0 };
   if (level === "major") return `${cur.major + 1}.0.0`;
   if (level === "minor") return `${cur.major}.${cur.minor + 1}.0`;
   return `${cur.major}.${cur.minor}.${cur.patch + 1}`;

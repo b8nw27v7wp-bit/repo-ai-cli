@@ -14,6 +14,7 @@ import {
 } from "../lib/config.js";
 import { findProvider, PROVIDERS } from "../lib/providers.js";
 import { debug } from "../lib/log.js";
+import { done, fail } from "../lib/ui.js";
 
 const interactive = Boolean(process.stdout.isTTY);
 
@@ -42,15 +43,6 @@ export function validateNumericValue(key: string, value: string): string | null 
   return null;
 }
 
-function done(msg: string): void {
-  console.log(`✓ ${msg}`);
-}
-
-function fail(msg: string): void {
-  console.error(`✖ ${msg}`);
-  process.exitCode = 1;
-}
-
 function failJson(msg: string, json: boolean): boolean {
   if (json) {
     console.log(JSON.stringify({ ok: false, error: msg }));
@@ -60,13 +52,12 @@ function failJson(msg: string, json: boolean): boolean {
   return false;
 }
 
-/** 校验 provider id 是否合法 */
-function assertValidProvider(value: string): void {
+/** 校验 provider id 是否合法；非法返回错误文案 */
+function providerError(value: string): string | null {
   if (!findProvider(value)) {
-    fail(
-      `未知 provider: ${value}。支持: ${PROVIDERS.map((p) => p.id).join(", ")}`,
-    );
+    return `未知 provider: ${value}。支持: ${PROVIDERS.map((p) => p.id).join(", ")}`;
   }
+  return null;
 }
 
 /** profile 显示名（undefined/default → default） */
@@ -105,7 +96,14 @@ export async function runConfigSet(
     fail(err);
     return;
   }
-  if (key === "provider") assertValidProvider(value);
+  if (key === "provider") {
+    const err = providerError(value);
+    if (err) {
+      if (failJson(err, opts.json === true)) return;
+      fail(err);
+      return;
+    }
+  }
 
   let parsed: string | number = value;
   if (meta.type === "number") {

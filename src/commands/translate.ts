@@ -1,11 +1,9 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import { intro } from "@clack/prompts";
 import { chatCompletion, llmConfigFromOptions } from "../lib/llm.js";
-import {
-  buildTranslatePrompt,
-  type TranslateTarget,
-} from "../prompts/translate.js";
+import { readTextCapped } from "../lib/options.js";
+import { buildTranslatePrompt, type TranslateTarget } from "../prompts/translate.js";
+import { parseEnum } from "../lib/options.js";
 import { loadConfig } from "../lib/config.js";
 import { writeOutput } from "../lib/output.js";
 import {
@@ -13,6 +11,7 @@ import {
   setJsonMode,
   isJsonMode,
   emitJson,
+  warn,
   done,
   fail,
   progress,
@@ -31,31 +30,21 @@ export async function runTranslate(options: TranslateOptions): Promise<void> {
   if (interactive && !isJsonMode()) intro("repo-ai translate");
 
   const abs = path.resolve(options.file);
-  let raw: string;
+  const maxBytes = (options.maxFileKb ?? 200) * 1024;
+  let content: string;
+  let truncated: boolean;
   try {
-    raw = await fs.readFile(abs, "utf8");
+    ({ content, truncated } = await readTextCapped(abs, maxBytes));
   } catch (err) {
     fail(
       `无法读取文件: ${options.file}（${err instanceof Error ? err.message : "不存在或不可读"}）`,
     );
     return;
   }
+  if (truncated) warn(`文件过大已截断，只翻译前 ${(maxBytes / 1024).toFixed(0)} KB`);
 
-  const target = TARGETS.includes(options.to as TranslateTarget)
-    ? (options.to as TranslateTarget)
-    : "en";
-  if (options.to && target === "en" && options.to !== "en") {
-    fail(`未知目标语言: ${options.to}。可用: ${TARGETS.join("/")}`);
-    return;
-  }
-
-  const maxBytes = (options.maxFileKb ?? 200) * 1024;
-  let content = raw;
-  let truncated = false;
-  if (Buffer.byteLength(raw, "utf8") > maxBytes) {
-    content = Buffer.from(raw, "utf8").subarray(0, maxBytes).toString("utf8");
-    truncated = true;
-  }
+  const target = parseEnum(options.to, TARGETS, "目标语言", "en");
+  if (!target) return;
 
   const progressBar = progress("AI 翻译中...");
   const relPath = path.relative(process.cwd(), abs).replaceAll("\\", "/") || options.file;

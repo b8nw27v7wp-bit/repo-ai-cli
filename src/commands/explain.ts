@@ -4,8 +4,8 @@ import { intro } from "@clack/prompts";
 import { chatCompletion, llmConfigFromOptions } from "../lib/llm.js";
 import {
   buildExplainPrompt,
-  type ExplainLanguage,
 } from "../prompts/explain.js";
+import { parseEnum } from "../lib/options.js";
 import { loadConfig } from "../lib/config.js";
 import {
   interactive,
@@ -99,6 +99,14 @@ export async function runExplain(options: ExplainOptions): Promise<void> {
     content = withLineNumbers(raw);
   }
 
+  const language = parseEnum(
+    options.language,
+    ["zh", "en", "bilingual"] as const,
+    "language",
+    "zh",
+  );
+  if (!language) return;
+
   const progressBar = progress("AI 解释代码中...");
   const relPath = path.relative(process.cwd(), abs).replaceAll("\\", "/") || fileArg;
   const messages = buildExplainPrompt({
@@ -107,7 +115,7 @@ export async function runExplain(options: ExplainOptions): Promise<void> {
     focus,
     symbol,
     truncated,
-    language: options.language as ExplainLanguage,
+    language,
   });
 
   let explanation: string;

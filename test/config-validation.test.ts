@@ -1,5 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { validateNumericValue } from "../src/commands/config.js";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { validateNumericValue, runConfigSet } from "../src/commands/config.js";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  process.exitCode = 0;
+});
 
 describe("validateNumericValue", () => {
   it("temperature 校验 0~2 范围", () => {
@@ -26,5 +31,20 @@ describe("validateNumericValue", () => {
 
   it("非数值键不校验数值", () => {
     expect(validateNumericValue("provider", "deepseek")).toBeNull();
+  });
+});
+
+describe("runConfigSet provider 校验", () => {
+  it("--json 下未知 provider 输出 JSON 错误且不保存", async () => {
+    const out: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => {
+      out.push(a.map(String).join(" "));
+    });
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await runConfigSet("provider", "nope", { json: true });
+    expect(process.exitCode).toBe(1);
+    expect(err).not.toHaveBeenCalled();
+    expect(out).toHaveLength(1);
+    expect(JSON.parse(out[0]!)).toMatchObject({ ok: false });
   });
 });

@@ -24,6 +24,10 @@ describe("computeNext", () => {
     expect(computeNext("0.4.0", "minor")).toBe("0.5.0");
     expect(computeNext("0.4.0", "patch")).toBe("0.4.1");
   });
+
+  it("非法输入回退到 0.0.0 基准", () => {
+    expect(computeNext("nope", "patch")).toBe("0.0.1");
+  });
 });
 
 describe("suggestNextVersion", () => {

@@ -6,6 +6,7 @@ import { chatCompletion, streamChatCompletion, llmConfigFromOptions } from "../l
 import { buildChangelogPrompt } from "../prompts/changelog.js";
 import { writeOutput } from "../lib/output.js";
 import { loadConfig } from "../lib/config.js";
+import { parseEnum } from "../lib/options.js";
 import {
   interactive,
   setJsonMode,
@@ -34,8 +35,14 @@ export async function runChangelog(options: ChangelogOptions): Promise<void> {
   const cfg = await loadConfig(options.profile);
   if (interactive && !isJsonMode()) intro("repo-ai changelog");
 
+  const language = parseEnum(options.language, ["zh", "en"] as const, "language", "zh");
+
   const cwd = process.cwd();
   const progressBar = progress("读取 git log...");
+  if (!language) {
+    progressBar.stop();
+    return;
+  }
 
   let range = options.range;
   let rangeLabel: string;
@@ -104,7 +111,7 @@ export async function runChangelog(options: ChangelogOptions): Promise<void> {
     repoName,
     commits,
     rangeLabel,
-    language: options.language,
+    language,
     existingHeader,
   });
 

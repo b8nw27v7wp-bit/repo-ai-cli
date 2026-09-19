@@ -36,13 +36,18 @@ describe("git hooks", () => {
     expect(res.backedUp).toBeUndefined();
   });
 
-  it("覆盖已有用户钩子时备份", async () => {
+  it("覆盖已有用户钩子时备份（时间戳后缀，不覆盖旧备份）", async () => {
     const hookPath = path.join(repo, ".git", "hooks", "prepare-commit-msg");
     await writeFile(hookPath, "#!/bin/sh\necho user\n", "utf8");
-    const res = await installHook(repo, "prepare-commit-msg");
-    expect(res.backedUp).toBe(hookPath + ".bak");
-    const bak = await readFile(res.backedUp!, "utf8");
+    const first = await installHook(repo, "prepare-commit-msg");
+    expect(first.backedUp).toMatch(/\.bak\.\d+$/);
+    const bak = await readFile(first.backedUp!, "utf8");
     expect(bak).toContain("echo user");
+    // 再次覆盖产生不同的备份文件
+    await writeFile(hookPath, "#!/bin/sh\necho user2\n", "utf8");
+    const second = await installHook(repo, "prepare-commit-msg");
+    expect(second.backedUp).toMatch(/\.bak\.\d+$/);
+    expect(second.backedUp).not.toBe(first.backedUp);
   });
 
   it("listHooks 报告状态", async () => {
@@ -58,5 +63,15 @@ describe("git hooks", () => {
     expect(res.removed).toBe(true);
     const again = await uninstallHook(repo, "prepare-commit-msg");
     expect(again.removed).toBe(false);
+  });
+
+  it("uninstall 时恢复最新备份", async () => {
+    const hookPath = path.join(repo, ".git", "hooks", "prepare-commit-msg");
+    await writeFile(hookPath, "#!/bin/sh\necho mine\n", "utf8");
+    await installHook(repo, "prepare-commit-msg");
+    const res = await uninstallHook(repo, "prepare-commit-msg");
+    expect(res.removed).toBe(true);
+    expect(res.restored).toBe(hookPath);
+    expect(await readFile(hookPath, "utf8")).toContain("echo mine");
   });
 });

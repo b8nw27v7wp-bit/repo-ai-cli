@@ -1,4 +1,4 @@
-import { intro, spinner, confirm, select, text } from "@clack/prompts";
+import { intro, confirm, select, text } from "@clack/prompts";
 import { getDiff, assertInGitRepo } from "../lib/git.js";
 import { chatCompletion, llmConfigFromOptions } from "../lib/llm.js";
 import { buildCommitPrompt } from "../prompts/commit.js";
@@ -102,8 +102,7 @@ export async function runCommit(options: CommitOptions): Promise<void> {
   }
 
   if (!interactive) {
-    // 非 TTY：直接打印 message（无法交互确认）
-    done("生成的 commit message：");
+    // 非 TTY：只打印 message（无法交互确认；保持 stdout 纯净便于管道）
     console.log(message);
     return;
   }
@@ -127,16 +126,15 @@ export async function runCommit(options: CommitOptions): Promise<void> {
       return;
     }
     if (action === "regenerate") {
-      const s = spinner();
-      s.start("重新生成...");
+      const regen = progress("重新生成...");
       try {
         message = cleanMessage(await chatCompletion(messages, llmConfig));
       } catch (err) {
-        s.stop("生成失败");
+        regen.stop("生成失败");
         fail((err as Error).message);
         return;
       }
-      s.stop();
+      regen.stop();
       continue;
     }
     if (action === "edit") {

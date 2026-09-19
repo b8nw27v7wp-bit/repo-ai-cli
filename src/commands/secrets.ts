@@ -3,6 +3,7 @@ import path from "node:path";
 import { intro } from "@clack/prompts";
 import { scanSecrets, type SecretFinding } from "../lib/scan-secrets.js";
 import { SEVERITIES, type Severity } from "../lib/secret-patterns.js";
+import { parseEnum } from "../lib/options.js";
 import {
   interactive,
   setJsonMode,
@@ -43,13 +44,8 @@ export async function runSecrets(options: SecretsOptions): Promise<void> {
     return;
   }
 
-  const threshold = SEVERITIES.includes(options.severity as Severity)
-    ? (options.severity as Severity)
-    : "medium";
-  if (options.severity && threshold === "medium" && options.severity !== "medium") {
-    fail(`未知 severity: ${options.severity}。可用: ${SEVERITIES.join("/")}`);
-    return;
-  }
+  const threshold = parseEnum(options.severity, SEVERITIES, "severity", "medium");
+  if (!threshold) return;
 
   const progressBar = progress("扫描敏感信息中...");
   const findings: SecretFinding[] = await scanSecrets(dir, {
@@ -60,6 +56,8 @@ export async function runSecrets(options: SecretsOptions): Promise<void> {
 
   if (isJsonMode()) {
     emitJson({ ok: findings.length === 0, count: findings.length, findings });
+    // 与文本模式一致：命中时退出码 1（CI 门禁依赖）
+    if (findings.length > 0) process.exitCode = 1;
     return;
   }
 

@@ -8,6 +8,7 @@ import {
   renderContributingEn,
 } from "../lib/contributing.js";
 import { writeOutput } from "../lib/output.js";
+import { parseEnum } from "../lib/options.js";
 import {
   interactive,
   setJsonMode,
@@ -76,7 +77,8 @@ export async function runContributing(options: ContributingOptions): Promise<voi
 
   const cwd = process.cwd();
   const output = options.output ?? "CONTRIBUTING.md";
-  const lang = options.language ?? "zh";
+  const lang = parseEnum(options.language, ["zh", "en"] as const, "language", "zh");
+  if (!lang) return;
 
   if (!options.force) {
     try {

@@ -158,20 +158,27 @@ export async function getDiff(
   args.push(...DIFF_PATHSPEC);
 
   const result = await runDiff(args, cwd, maxBytes);
+  if (!all) return result;
 
-  // --all：git diff HEAD 不含 untracked 新文件，这里补上（以 new file 风格呈现）
-  if (all) {
-    const untracked = await buildUntrackedDiff(cwd, maxBytes);
-    if (untracked.files.length > 0) {
-      const merged = result.diff.trim()
-        ? `${result.diff}\n${untracked.text}`
-        : untracked.text;
-      result.diff = merged;
-      result.files = [...new Set([...result.files, ...untracked.files])];
-      result.totalBytes = Buffer.byteLength(merged, "utf8");
-    }
+  // --all：git diff HEAD 不含 untracked 新文件；与 tracked 共享同一个预算池
+  const used = Buffer.byteLength(result.diff, "utf8");
+  const remaining = maxBytes - used;
+  if (remaining <= 0) {
+    return { ...result, truncated: true };
   }
-  return result;
+  const untracked = await buildUntrackedDiff(cwd, remaining);
+  if (untracked.files.length === 0) return result;
+
+  const merged = result.diff.trim()
+    ? `${result.diff}\n${untracked.text}`
+    : untracked.text;
+  return {
+    diff: merged,
+    totalBytes: Buffer.byteLength(merged, "utf8"),
+    truncated: result.truncated || untracked.clipped,
+    // 从最终输出重解析：被截掉的文件不再列入
+    files: parseDiffFiles(merged),
+  };
 }
 
 const DIFF_PATHSPEC = [
@@ -196,14 +203,18 @@ async function getUntrackedFiles(cwd: string): Promise<string[]> {
 async function buildUntrackedDiff(
   cwd: string,
   maxBytes: number,
-): Promise<{ text: string; files: string[] }> {
+): Promise<{ text: string; files: string[]; clipped: boolean }> {
   const paths = await getUntrackedFiles(cwd);
   const chunks: string[] = [];
   const files: string[] = [];
   let budget = maxBytes;
+  let clipped = false;
 
   for (const rel of paths) {
-    if (budget <= 0) break;
+    if (budget <= 0) {
+      clipped = true;
+      break;
+    }
     let content: string;
     try {
       const buf = await fs.readFile(path.join(cwd, rel));
@@ -215,6 +226,7 @@ async function buildUntrackedDiff(
     let keep = content;
     if (Buffer.byteLength(keep, "utf8") > budget) {
       keep = Buffer.from(keep, "utf8").subarray(0, budget).toString("utf8");
+      clipped = true;
     }
     const lines = keep.split("\n");
     chunks.push(`diff --git a/${rel} b/${rel}`);
@@ -227,7 +239,17 @@ async function buildUntrackedDiff(
     budget -= Buffer.byteLength(keep, "utf8");
   }
 
-  return { text: chunks.join("\n"), files };
+  return { text: chunks.join("\n"), files, clipped };
+}
+
+/** 从 diff 文本解析涉及的文件列表 */
+function parseDiffFiles(text: string): string[] {
+  const files: string[] = [];
+  for (const line of text.split("\n")) {
+    const m = line.match(/^diff --git a\/(.+?) b\//);
+    if (m?.[1]) files.push(m[1]);
+  }
+  return files;
 }
 
 /** 通用 diff 执行 + 文件解析 + 截断 */
@@ -238,12 +260,7 @@ async function runDiff(
 ): Promise<DiffResult> {
   const raw = await runGit(args, cwd);
   const totalBytes = Buffer.byteLength(raw, "utf8");
-
-  const files: string[] = [];
-  for (const line of raw.split("\n")) {
-    const m = line.match(/^diff --git a\/(.+?) b\//);
-    if (m?.[1]) files.push(m[1]);
-  }
+  const files = parseDiffFiles(raw);
 
   if (totalBytes <= maxBytes) {
     return { diff: raw, totalBytes, truncated: false, files };
@@ -317,6 +334,19 @@ export async function getCurrentBranch(cwd: string): Promise<string> {
   await assertInGitRepo(cwd);
   const out = await runGit(["rev-parse", "--abbrev-ref", "HEAD"], cwd);
   return out.trim();
+}
+
+/** tag 是否已存在 */
+export async function tagExists(cwd: string, tag: string): Promise<boolean> {
+  try {
+    const out = await runGit(
+      ["rev-parse", "--verify", "--quiet", `refs/tags/${tag}`],
+      cwd,
+    );
+    return out.trim().length > 0;
+  } catch {
+    return false;
+  }
 }
 
 /** 最近的 tag 名（无 tag 返回空字符串） */
