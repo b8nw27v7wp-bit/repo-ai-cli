@@ -1,6 +1,6 @@
 {
   "name": "repo-ai-cli",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "AI-powered repo helper CLI: 23 commands for README, commit, changelog, review, tests, PRs & offline repo utilities (secrets, stats, deps audit, badges)",
   "main": "./dist/index.js",
   "scripts": {
