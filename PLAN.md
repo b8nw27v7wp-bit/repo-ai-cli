@@ -29,10 +29,12 @@
 
 ### 1.4 非目标（明确不做，防范围蔓延）
 
-- ❌ 不做多 LLM 提供商适配（第一版只支持 DeepSeek，架构上留接口）
-- ❌ 不做 GUI / VSCode 插件 / Web 服务
-- ❌ 不做 AI 写代码、AI review 等"大而全"功能
-- ❌ 不做自建代理 / 云端托管（BYOK 意味着无后端）
+> 本节是 v0.1 立项时的范围约束。后续里程碑推翻了其中两条，已标注；保留项仍然有效。
+
+- ~~❌ 不做多 LLM 提供商适配（第一版只支持 DeepSeek，架构上留接口）~~ → **已推翻**：M14 扩到 13 家 provider + 任意 OpenAI 兼容端点；BYOK 下每家只是加一条 provider 定义，不构成范围蔓延
+- ~~❌ 不做 AI 写代码、AI review 等"大而全"功能~~ → **已推翻**：M8-M13 陆续加了 review / explain / pr / test / refactor / ask / fix；其中 test/refactor/fix **只输出建议不改代码**，AI 写代码仍然不做
+- ❌ 不做 GUI / VSCode 插件 / Web 服务（仍有效）
+- ❌ 不做自建代理 / 云端托管（仍有效：BYOK 意味着无后端）
 
 ---
 
@@ -117,13 +119,14 @@ repo-ai readme [path-or-url]
    - 硬性跳过：`.git/`、`node_modules/`、`dist/`、`build/`、`coverage/`、`.next/`、锁文件（`package-lock.json`、`pnpm-lock.yaml`、`yarn.lock`、`bun.lockb`）、所有二进制/图片/视频/字体
    - 单文件大小上限 100KB（超限跳过）
    - 扩展名白名单：源码类（`.ts .js .py .go .rs .java .vue .jsx .tsx`）、配置类（`.json .yaml .yml .toml .ini`）、文档类（`README*`、`LICENSE*` 优先收录）
-3. **token 预算分配**（默认总预算 ~8k token，`--max-tokens` 可调）：
+   - **敏感内容过滤**：`.env*`（`*.example` 模板除外）/ 私钥 / 证书等敏感文件名一律不收；内容命中密钥模式（GitHub/AWS/PEM/OpenAI/带引号与无引号赋值）的文件也跳过，经 `onSensitiveSkipped` 上报给用户——密钥不该跟着代码发去第三方 API
+3. **token 预算分配**（默认总预算 48000 token，`--max-tokens` 可调）：
    - 优先级 1：README 现状、LICENSE、package.json（最反映项目定位）
    - 优先级 2：目录树（全量，文本格式很省 token）+ 主要入口文件（`src/index.*`、`main.*`、`setup.py` 等）
    - 优先级 3：其余源码**采样**（每个文件取前 60 行，超出预算即截断）
-   - 预算耗尽的文件在给 AI 的消息中标注 `[truncated]`，防止 AI 误以为内容完整
+   - 预算耗尽的文件在给 AI 的消息中标注 `[skipped N file(s) ...]`，防止 AI 误以为内容完整
 4. 组装 prompt（模板见 §5）→ 调用 DeepSeek → 解析 markdown → 写文件。
-5. 生成失败/输出为空 → 重试 1 次 → 仍失败则打印原始响应并提示，不写坏文件。
+5. 生成失败/输出为空 → `llm.ts` 指数退避重试 2 次（429/5xx/超时/空响应可重试，401/403 直接失败）→ 仍失败则报错并提示，不写坏文件。
 
 ### 4.2 `repo-ai commit` — 根据 git diff 生成 commit message
 
@@ -182,8 +185,8 @@ repo-ai commit [--staged | --all]
 
 | 测试对象 | 关键用例 |
 |---|---|
-| collect-files | 跳过 node_modules/锁文件/二进制；.gitignore 生效；100KB 上限；README 优先 |
-| token-budget | 预算耗尽截断顺序正确；`[truncated]` 标注；0 文件时抛错 |
+| collect-files | 跳过 node_modules/锁文件/二进制；.gitignore 生效；100KB 上限；README 优先；敏感文件名与含明文密钥的文件被排除且回调上报；代码引用（`options.apiKey`、Vue `:token="x"`）不被误杀 |
+| token-budget | 预算耗尽截断顺序正确；`[skipped ...]` 标注；0 文件列表不抛错（空目录的报错在 `collectMaterials` 层） |
 | github | URL 解析（`owner/repo`、`https://...`、带分支）；临时目录清理 |
 | git | staged/all 模式；非 git 仓库报错；超限截断 |
 | llm | mock fetch：成功/超时/429/500/空响应 → 重试逻辑；API key 缺失时报友好错误 |
@@ -370,10 +373,11 @@ jobs:
 
 | 风险 | 对策 |
 |---|---|
-| DeepSeek 输出不稳定（JSON/空响应） | 重试 1 次 + 原始响应兜底输出，绝不静默写坏文件 |
-| token 超限（大仓库） | 三层预算机制 + `--max-tokens` + `[truncated]` 标注 |
+| 任一 provider 输出不稳定（JSON/空响应） | 指数退避重试 2 次 + 空响应重试；失败时报错并保持原文件不动，绝不静默写坏文件 |
+| token 超限（大仓库） | 三层预算机制 + `--max-tokens` + `[skipped ...]` 标注 |
 | diff 太大 | 200KB 截断 + 标注；提示用户分次 commit |
-| 用户没配 API Key | 启动时友好报错 + README 写清 `export DEEPSEEK_API_KEY=...`（Windows: `set`） |
+| 密钥被当成材料发给 LLM | 收集阶段按文件名与内容双重过滤，命中即跳过并 warn；BYOK 仍不免除这层保护 |
+| 用户没配 API Key | `no-api-key` 错误给完整指引（环境变量名 + `config set` 用法），`doctor` 可体检 |
 | 中文输出乱码 | 统一 UTF-8，prompt 明确要求 markdown 格式 |
 | 范围蔓延 | §1.4 非目标清单，M1-M5 严格按验收线走 |
 
@@ -382,8 +386,8 @@ jobs:
 ## 10. 简历条目（预写）
 
 > **repo-ai-cli** — TypeScript CLI 工具（npm 发布，GitHub Actions 自动 CI/CD）
-> 23 条命令覆盖仓库助手全场景：AI 生成双语 README / 规范 commit / CHANGELOG / 代码审查 / 解释 / PR 描述 / 文档翻译 / 单元测试 / 重构建议 / bug 定位 / 代码库问答（RAG） / README 徽章 / 贡献指南，以及离线的密钥扫描 / 环境体检 / .gitignore / LICENSE / 仓库统计 / 依赖解析（--outdated / --audit）/ 项目脚手架 / git 钩子 / 语义化版本发布；实现 token 预算控制、.gitignore 感知文件收集、LLM 重试与流式输出、GitHub 仓库浅克隆（含镜像回退）、多 profile 配置切换、--verbose 调试日志；支持 13 家国内外 LLM 提供商（DeepSeek/OpenAI/Kimi/GLM/通义/MiniMax/Grok/硅基流动/Ollama 本地/OpenRouter/Groq/火山方舟/Gemini）及任意 OpenAI 兼容端点；BYOK 零服务端成本；210 单测覆盖核心逻辑。
+> 23 条命令覆盖仓库助手全场景：AI 生成双语 README / 规范 commit / CHANGELOG / 代码审查 / 解释 / PR 描述 / 文档翻译 / 单元测试 / 重构建议 / bug 定位 / 代码库问答（RAG） / README 徽章 / 贡献指南，以及离线的密钥扫描 / 环境体检 / .gitignore / LICENSE / 仓库统计 / 依赖解析（--outdated / --audit）/ 项目脚手架 / git 钩子 / 语义化版本发布；实现 token 预算控制、.gitignore 感知文件收集、LLM 重试与流式输出、GitHub 仓库浅克隆（含镜像回退）、多 profile 配置切换、--verbose 调试日志；支持 13 家国内外 LLM 提供商（DeepSeek/OpenAI/Kimi/GLM/通义/MiniMax/Grok/硅基流动/Ollama 本地/OpenRouter/Groq/火山方舟/Gemini）及任意 OpenAI 兼容端点；BYOK 零服务端成本；236 单测覆盖核心逻辑。
 
 ---
 
-*计划版本：v1.0 · 2026-07-31 · 待用户确认后从 M1 开始执行*
+*计划版本：v1.0 · 2026-07-31 · M1-M15 已全部完成（v0.6.0，23 条命令 / 13 家 provider / 236 测试）；本文件已按当前实现回写口径，后续变更需同步更新*

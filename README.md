@@ -40,8 +40,8 @@
 - 🏗️ **Project Scaffolding** — `repo-ai-cli init` scaffolds a ready-to-build TypeScript CLI or library (tsup + vitest), no LLM required.
   **项目脚手架** — `repo-ai-cli init` 一键生成可构建的 TypeScript CLI / 库项目骨架。
 
-- ⚡ **Streaming Output** — `--stream` streams the LLM output token-by-token during `readme` / `changelog` generation for instant feedback.
-  **流式输出** — `readme` / `changelog` 加 `--stream` 边生成边打印，实时反馈。
+- ⚡ **Streaming Output** — `--stream` streams the LLM output token-by-token during `readme` / `changelog` generation for instant feedback. Streaming does not retry (already-sent tokens cannot be safely replayed) — rerun on failure.
+  **流式输出** — `readme` / `changelog` 加 `--stream` 边生成边打印，实时反馈。流式路径不重试（已发出的 token 无法安全重放），失败请重新执行。
 
 - 🕵️ **Secret Scanning** — `repo-ai-cli secrets` scans your repo offline for hardcoded credentials (GitHub/AWS/Slack/OpenAI/private keys...) with severity ranking and masked output, CI-friendly exit codes.
   **密钥扫描** — `repo-ai-cli secrets` 离线扫描仓库中的硬编码密钥（GitHub/AWS/Slack/OpenAI/私钥等），按严重程度分级、打码输出，可接入 CI。
@@ -75,6 +75,9 @@
 
 - 🧠 **Smart Token Budgeting** — Three-tier file prioritization and sampling ensure efficient use of your LLM token budget, even for large repositories.
   **智能 Token 预算管理** — 三层文件优先级与采样机制，即使面对大型仓库也能高效利用 LLM Token 预算。
+
+- 🛡️ **Secret-Aware File Collection** — Files whose name looks sensitive (`.env*`, private keys, certificates) or whose content matches a credential pattern (GitHub/AWS/PEM/OpenAI keys, quoted and bare assignments) are excluded from the material sent to the LLM, and each exclusion is reported. `.env.example` templates and normal code references such as `options.apiKey` are not affected.
+  **密钥感知的文件收集** — 文件名敏感（`.env*`、私钥、证书）或内容命中凭据模式（GitHub/AWS/PEM/OpenAI 密钥、带引号与无引号赋值）的文件不会进入发给 LLM 的材料，且逐个上报；`.env.example` 模板与 `options.apiKey` 这类正常代码引用不受影响。
 
 - 🚀 **GitHub Repository Support** — Pass a GitHub URL or `owner/repo` shorthand; the tool shallow-clones the repo to a temp directory and cleans up automatically.
   **支持 GitHub 仓库** — 传入 GitHub URL 或 `owner/repo` 简写，工具会自动浅克隆到临时目录并在完成后清理。
