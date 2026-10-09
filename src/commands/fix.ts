@@ -8,10 +8,18 @@ import {
   setJsonMode,
   isJsonMode,
   emitJson,
+  warn,
   fail,
   progress,
 } from "../lib/ui.js";
 import type { FixOptions } from "../types.js";
+
+/** 材料里被排除的疑似密钥文件上报（这些文件不会发给 LLM，静默丢弃会让用户困惑） */
+function reportSkippedSecrets(skipped: string[]): void {
+  for (const rel of skipped) {
+    warn(`已排除疑似含密钥的文件（不发送给 LLM）: ${rel}`);
+  }
+}
 
 /**
  * repo-ai fix — 根据 bug 描述定位根因并给出修复建议（只建议，不改代码）。
@@ -35,6 +43,7 @@ export async function runFix(options: FixOptions): Promise<void> {
     return;
   }
   p.update("AI 定位问题中...");
+  reportSkippedSecrets(materials.sensitiveSkipped);
 
   const messages = buildFixPrompt(
     materials.repoName,

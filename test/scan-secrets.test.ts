@@ -81,4 +81,10 @@ describe("SECRET_PATTERNS / maskValue", () => {
     expect(maskValue("short")).toBe("****");
     expect(maskValue("abcdefghij")).toBe("abcd...ghij");
   });
+
+  it("maskValue 纯数字只留首尾 2 位（避免短秘密空间被明文缩小）", () => {
+    expect(maskValue("12345678")).toBe("****"); // ≤8 位全遮
+    expect(maskValue("12345678901234567890")).toBe("12...90");
+    expect(maskValue("987654321098")).toBe("98...98");
+  });
 });

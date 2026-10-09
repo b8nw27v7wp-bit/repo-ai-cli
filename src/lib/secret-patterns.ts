@@ -83,8 +83,11 @@ export const SECRET_PATTERNS: SecretPattern[] = [
   },
 ];
 
-/** 打码：保留前 4 后 4，中间省略 */
+/** 打码：默认保留前 4 后 4，中间省略。
+ * 纯数字（PIN/卡号类）只留前 2 后 2——首尾 4 位对短秘密空间是实质泄露，
+ * 留 2 位仍足够定位到是哪一条。 */
 export function maskValue(value: string): string {
   if (value.length <= 8) return "****";
+  if (/^\d+$/.test(value)) return `${value.slice(0, 2)}...${value.slice(-2)}`;
   return `${value.slice(0, 4)}...${value.slice(-4)}`;
 }

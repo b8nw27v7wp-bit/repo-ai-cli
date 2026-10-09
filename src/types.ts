@@ -14,6 +14,11 @@ export interface CollectOptions {
   maxFileBytes?: number;
   /** 是否尊重 .gitignore（非 git 仓库自动跳过） */
   respectGitignore?: boolean;
+  /**
+   * 每发现一个因敏感文件名或疑似明文密钥而被排除的文件就回调一次（相对路径）。
+   * 用于调用方 warn 上报——被排除的文件不会进 LLM 材料，静默丢弃会让用户困惑。
+   */
+  onSensitiveSkipped?: (relPath: string) => void;
 }
 
 export type IncludeMode = "full" | "sample" | "skip";

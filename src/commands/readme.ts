@@ -95,6 +95,8 @@ export async function runReadme(options: ReadmeOptions): Promise<void> {
     progressBar.update("收集项目文件...");
     const files = await collectFiles(workDir, {
       maxFileBytes: options.maxFileKb * 1024,
+      onSensitiveSkipped: (rel) =>
+        warn(`已排除疑似含密钥的文件（不发送给 LLM）: ${rel}`),
     });
     if (files.length === 0) {
       progressBar.stop();

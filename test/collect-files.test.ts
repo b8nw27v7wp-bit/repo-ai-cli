@@ -89,4 +89,80 @@ describe("collectFiles", () => {
     const files = await collectFiles(tmp);
     expect(files).toHaveLength(0);
   });
+
+  it("跳过敏感文件名并经 onSensitiveSkipped 上报", async () => {
+    await makeTree({
+      ".env": "K=1\n",
+      ".env.local": "K=1\n",
+      "config.env": "TOKEN=1\n",
+      "id_rsa": "PRIVATE\n",
+      "cert.pem": "x\n",
+      "app.ts": "export const a = 1;",
+    });
+    const skipped: string[] = [];
+    const files = await collectFiles(tmp, {
+      onSensitiveSkipped: (rel) => skipped.push(rel),
+    });
+    expect(files.map((f) => f.relPath)).toEqual(["app.ts"]);
+    expect([...skipped].sort()).toEqual(
+      [".env", ".env.local", "cert.pem", "config.env", "id_rsa"].sort(),
+    );
+  });
+
+  it(".env.example 公开模板不算敏感跳过", async () => {
+    await makeTree({ ".env.example": "K=YOUR_KEY_HERE\n" });
+    const skipped: string[] = [];
+    const files = await collectFiles(tmp, {
+      onSensitiveSkipped: (rel) => skipped.push(rel),
+    });
+    // 既不能进敏感名单，也不能被 isSourceName 静默丢掉（example 后缀不在白名单）
+    expect(skipped).toEqual([]);
+    expect(files.map((f) => f.relPath)).toEqual([".env.example"]);
+  });
+
+  it("跳过含明文密钥的文件并经回调上报", async () => {
+    await makeTree({
+      // YAML 无引号赋值（generic-assignment 抓不到这种）
+      "settings.yaml": "password: hunter2secret\n",
+      // JSON 键自带引号
+      "service.json": '{"apiKey": "abcdef1234567890"}\n',
+      "app.ts": "export const a = 1;",
+    });
+    const skipped: string[] = [];
+    const files = await collectFiles(tmp, {
+      onSensitiveSkipped: (rel) => skipped.push(rel),
+    });
+    expect(files.map((f) => f.relPath)).toEqual(["app.ts"]);
+    expect([...skipped].sort()).toEqual(["service.json", "settings.yaml"]);
+  });
+
+  it("不误杀代码引用、测试桩与文件名含 secret 的源码", async () => {
+    await makeTree({
+      "lib.ts": [
+        "const apiKey = options.apiKey;", // 属性访问
+        "const token = committedToken;", // camelCase 标识符
+        "const password = process.env.DB_PASS;", // 代码引用
+        "const secret = _internal_secret;", // 下划线标识符
+        "const key = not-the-token;", // 测试桩词组
+      ].join("\n"),
+      "Panel.vue": '<template><K :token="committedToken" /></template>\n',
+      "scan-secrets.ts": "export const p = 1;\n",
+      "useTokens.ts": "export const q = 1;\n",
+    });
+    const files = await collectFiles(tmp);
+    const rels = files.map((f) => f.relPath);
+    expect(rels).toContain("lib.ts");
+    expect(rels).toContain("Panel.vue");
+    expect(rels).toContain("scan-secrets.ts");
+    expect(rels).toContain("useTokens.ts");
+  });
+
+  it("不传回调时敏感文件照样被跳过且不报错", async () => {
+    await makeTree({
+      "config.env": "TOKEN=1\n",
+      "app.ts": "export const a = 1;",
+    });
+    const files = await collectFiles(tmp);
+    expect(files.map((f) => f.relPath)).toEqual(["app.ts"]);
+  });
 });

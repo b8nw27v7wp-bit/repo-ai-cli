@@ -12,10 +12,18 @@ import {
   setJsonMode,
   isJsonMode,
   emitJson,
+  warn,
   fail,
   progress,
 } from "../lib/ui.js";
 import type { AskOptions } from "../types.js";
+
+/** 材料里被排除的疑似密钥文件上报（这些文件不会发给 LLM，静默丢弃会让用户困惑） */
+function reportSkippedSecrets(skipped: string[]): void {
+  for (const rel of skipped) {
+    warn(`已排除疑似含密钥的文件（不发送给 LLM）: ${rel}`);
+  }
+}
 
 /**
  * repo-ai ask — 针对当前代码库提问（RAG：收集材料 → LLM 回答）。
@@ -39,6 +47,7 @@ export async function runAsk(options: AskOptions): Promise<void> {
     return;
   }
   p.update("AI 思考中...");
+  reportSkippedSecrets(materials.sensitiveSkipped);
 
   const messages = buildAskPrompt(
     materials.repoName,

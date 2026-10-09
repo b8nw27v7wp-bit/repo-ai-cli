@@ -43,6 +43,8 @@ export interface CollectedMaterials {
   repoName: string;
   budget: BudgetResult;
   files: CollectedFile[];
+  /** 因文件名敏感或含疑似明文密钥被排除的文件（相对路径）——不会发给 LLM，调用方应 warn 上报 */
+  sensitiveSkipped: string[];
 }
 
 /**
@@ -53,8 +55,10 @@ export async function collectMaterials(options: {
   maxTokens: number;
   maxFileKb: number;
 }): Promise<CollectedMaterials> {
+  const sensitiveSkipped: string[] = [];
   const files = await collectFiles(options.rootDir, {
     maxFileBytes: options.maxFileKb * 1024,
+    onSensitiveSkipped: (rel) => sensitiveSkipped.push(rel),
   });
   if (files.length === 0) {
     throw new Error("未收集到任何可分析的文件（目录为空或全部被过滤）");
@@ -69,5 +73,5 @@ export async function collectMaterials(options: {
     treeText,
     maxTokens: options.maxTokens,
   });
-  return { repoName, budget, files };
+  return { repoName, budget, files, sensitiveSkipped };
 }
