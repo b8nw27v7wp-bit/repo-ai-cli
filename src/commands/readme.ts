@@ -8,6 +8,7 @@ import { chatCompletion, streamChatCompletion, llmConfigFromOptions } from "../l
 import { buildReadmePrompt } from "../prompts/readme.js";
 import { parseEnum } from "../lib/options.js";
 import { writeOutput } from "../lib/output.js";
+import { validateReadmeStructure } from "../lib/readme-validate.js";
 import { parseGithubRef, cloneRepo } from "../lib/github.js";
 import { loadConfig } from "../lib/config.js";
 import {
@@ -188,7 +189,17 @@ export async function runReadme(options: ReadmeOptions): Promise<void> {
       return;
     }
 
-    // 5. 写文件
+    // 5. 落盘前结构校验：不合格直接报错，绝不写出半成品
+    const validation = validateReadmeStructure(content);
+    if (!validation.ok) {
+      fail(
+        "README 结构校验未通过，未写入文件：\n" +
+          validation.issues.map((i) => `  - ${i}`).join("\n"),
+      );
+      return;
+    }
+
+    // 6. 写文件
     const outputPath = options.output ?? "README.md";
     const abs = await writeOutput(content, outputPath);
     if (isJsonMode()) {

@@ -97,16 +97,26 @@ describe("resolveLLMConfig", () => {
     expect(r.baseUrl).toBe("https://x.example");
   });
 
-  it("无任何 key 时抛错并列出所有环境变量", () => {
+  it("无任何 key 时给出三条可行动作与 doctor 入口（首跑引导）", () => {
     clearAll();
     try {
       resolveLLMConfig();
       expect.unreachable();
     } catch (err) {
       const msg = (err as Error).message;
+      // 动作 1：配置 DeepSeek key
       expect(msg).toContain("DEEPSEEK_API_KEY");
-      expect(msg).toContain("OPENAI_API_KEY");
+      expect(msg).toContain("platform.deepseek.com");
+      // 动作 2：本地 Ollama 免 key
+      expect(msg).toContain("--provider ollama");
+      // 动作 3：任意 OpenAI 兼容端点
       expect(msg).toContain("LLM_BASE_URL");
+      expect(msg).toContain("LLM_API_KEY");
+      // doctor 体检入口
+      expect(msg).toContain("repo-ai-cli doctor");
+      // 持久化配置路径（一次设置长期生效，不该被引导文案丢掉）
+      expect(msg).toContain("repo-ai-cli config set provider");
+      expect(msg).toContain("repo-ai-cli config set apiKey");
     }
   });
 

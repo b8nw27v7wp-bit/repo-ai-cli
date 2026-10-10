@@ -246,21 +246,22 @@ export function resolveLLMConfig(input: ResolveInput = {}): ResolvedLLMConfig {
     }
   }
 
-  // 5. 什么都没有
-  const envList = PROVIDERS.map(
-    (p) => `  ${p.apiKeyEnv}  →  ${p.name}`,
-  ).join("\n");
+  // 5. 什么都没有 → 首跑引导：三条可行动作 + doctor 体检入口
+  // （完整 key 清单不再罗列，避免刷屏；由 doctor 命令按 provider 逐项体检）
+  const deepseek = findProvider(DEFAULT_PROVIDER_ID);
   throw new Error(
-    "未检测到任何 LLM API Key。任选其一：\n" +
-      "a) 设置提供商专用变量：\n" +
-      envList +
-      "\n" +
-      "b) 或使用自定义 OpenAI 兼容端点：\n" +
-      "  export LLM_BASE_URL=https://your-endpoint/v1\n" +
-      "  export LLM_API_KEY=sk-xxx\n" +
-      "c) 或持久化配置（推荐，一次设置长期生效）：\n" +
-      "  repo-ai-cli config set provider deepseek\n" +
-      "  repo-ai-cli config set apiKey sk-xxx\n" +
-      "d) 或临时指定：repo-ai-cli readme --provider deepseek --api-key sk-xxx",
+    "未检测到任何 LLM API Key。以下三种方式任选其一：\n" +
+      "1) 配置 DeepSeek key（推荐，注册即可用）：\n" +
+      "     export DEEPSEEK_API_KEY=sk-xxx\n" +
+      `     获取 key: ${deepseek?.docsUrl ?? "见官方文档"}\n` +
+      "2) 使用本地 Ollama（无需任何 key）：\n" +
+      "     repo-ai-cli readme . --provider ollama\n" +
+      "3) 配置任意 OpenAI 兼容端点（自建或其他服务）：\n" +
+      "     export LLM_BASE_URL=https://your-endpoint/v1\n" +
+      "     export LLM_API_KEY=sk-xxx\n" +
+      "不想每次带环境变量？可持久化保存（一次设置长期生效）：\n" +
+      "     repo-ai-cli config set provider deepseek\n" +
+      "     repo-ai-cli config set apiKey sk-xxx\n" +
+      "不确定选哪个？先跑体检命令查看环境与全部 provider 状态：repo-ai-cli doctor",
   );
 }
