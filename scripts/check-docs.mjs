@@ -43,6 +43,18 @@ const GROUP_CMDS = new Set(["config", "hooks"]);
 
 const errors = [];
 const top = parseCommands(help());
+
+// CLI 描述里的命令总数必须与实际顶层命令数一致。
+// 这条不是洁癖：description 里的数字不会随命令增加自动更新，
+// README 与 --help 曾各自停在 23/24 两个口径上漂移。
+const topHelp = help();
+const claimed = topHelp.match(/(\d+)\s+commands?/)?.[1];
+if (claimed !== undefined && Number(claimed) !== top.length) {
+  errors.push(
+    `命令总数不一致: --help 描述写 ${claimed} 条，实际注册 ${top.length} 条（src/index.ts 的 .description）`,
+  );
+}
+
 for (const name of top) {
   if (!readme.includes(`#### \`repo-ai-cli ${name}\``)) {
     errors.push(`缺少小节: #### \`repo-ai-cli ${name}\``);

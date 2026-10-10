@@ -44,7 +44,7 @@ const program = new Command();
 
 program
   .name("repo-ai-cli")
-  .description("AI-powered repo helper: 23 commands — README, commit, changelog, review, explain, pr, init, secrets, doctor, gitignore, license, stats, deps, translate, test, refactor, hooks, ask, fix, release, badges, contributing, config")
+  .description("AI-powered repo helper: 24 commands — README, commit, changelog, review, review-pr, explain, pr, init, secrets, doctor, gitignore, license, stats, deps, translate, test, refactor, hooks, ask, fix, release, badges, contributing, config")
   .version(pkg.version)
   .option("--verbose", "debug output to stderr (network, config, provider resolution)");
 
