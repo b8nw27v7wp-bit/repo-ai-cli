@@ -29,6 +29,16 @@ npx repo-ai-cli readme
 
 不想覆盖现有 README：先 `npx repo-ai-cli readme --dry-run` 只看统计、不调用 API，或用 `-o README.gen.md` 输出到别的文件。
 
+有了 Key 之后，两条高频用法：
+
+```bash
+# 审查线上 GitHub PR（不需要安装 gh CLI）
+npx repo-ai-cli review-pr owner/repo#123
+
+# 根据暂存改动生成规范 commit message
+npx repo-ai-cli commit --print
+```
+
 完全离线、零配置也能立刻试的命令：
 
 ```bash

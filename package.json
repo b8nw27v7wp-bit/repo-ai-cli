@@ -1,7 +1,7 @@
 {
   "name": "repo-ai-cli",
   "version": "0.6.0",
-  "description": "AI-powered repo helper CLI: 23 commands for README, commit, changelog, review, tests, PRs & offline repo utilities (secrets, stats, deps audit, badges)",
+  "description": "AI repo CLI: bilingual README, CHANGELOG, commit/review/test/PR via your own LLM key; offline secrets scan, stats & deps audit",
   "main": "./dist/index.js",
   "scripts": {
     "build": "tsup",
