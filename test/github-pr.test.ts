@@ -179,6 +179,32 @@ describe("fetchPullRequestDiff", () => {
     expect(out.totalBytes).toBe(Buffer.byteLength(big, "utf8"));
   });
 
+  it("中文 diff 也按字节截断（不按字符——否则预算形同虚设）", async () => {
+    // 中文每字 3 字节：若按字符 slice，同样字符数的字节数会到预算的 3 倍
+    const big = "diff --git a/f b/f\n" + "中文注释内容".repeat(2000);
+    const maxBytes = 300;
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(big, { status: 200 })));
+    const out = await fetchPullRequestDiff({ owner: "o", repo: "r", number: 1 }, maxBytes);
+    expect(out.truncated).toBe(true);
+    expect(Buffer.byteLength(out.raw, "utf8")).toBeLessThanOrEqual(maxBytes);
+  });
+
+  it("GITHUB_TOKEN 存在时走认证请求（匿名只有 60 次/小时）", async () => {
+    const prev = process.env.GITHUB_TOKEN;
+    process.env.GITHUB_TOKEN = "test-token-value";
+    try {
+      const spy = vi.fn(async (_url: string, _init?: RequestInit) => new Response("d", { status: 200 }));
+      vi.stubGlobal("fetch", spy);
+      await fetchPullRequestDiff({ owner: "o", repo: "r", number: 1 });
+      const init = spy.mock.calls[0]?.[1];
+      const headers = (init?.headers ?? {}) as Record<string, string>;
+      expect(headers.Authorization).toBe("Bearer test-token-value");
+    } finally {
+      if (prev === undefined) delete process.env.GITHUB_TOKEN;
+      else process.env.GITHUB_TOKEN = prev;
+    }
+  });
+
   it("空 diff 抛错（空改动或纯二进制）", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 200 })));
     await expect(
