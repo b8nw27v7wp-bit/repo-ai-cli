@@ -200,6 +200,8 @@ export interface LicenseOptions {
 export interface StatsOptions {
   /** 目录（默认当前目录） */
   target?: string;
+  /** 只统计该日期起（含当日，YYYY-MM-DD）的提交与贡献者；缺省统计全部历史 */
+  since?: string;
   /** JSON 输出（脚本友好） */
   json?: boolean;
 }
@@ -359,6 +361,8 @@ export interface ChangelogOptions {
   output?: string;
   /** 语言：zh | en（默认 zh） */
   language: "zh" | "en";
+  /** 输出格式：keep-a-changelog（默认，AI 生成）| compact（本地逐行渲染，不调用 LLM） */
+  format?: string;
   /** dry-run：只打印统计 */
   dryRun?: boolean;
   /** 只打印不写文件 */

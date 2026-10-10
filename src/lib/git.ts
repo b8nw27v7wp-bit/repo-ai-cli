@@ -364,23 +364,47 @@ export interface RepoMeta {
   authorCount: number;
   firstCommitDate?: string;
   lastCommitDate?: string;
+  /** 统计窗口起点（--since 传入时回显，便于 JSON 消费方确认统计口径） */
+  since?: string;
 }
 
-/** 仓库元信息：提交数 / 贡献者数 / 首次与最近提交日期。失败时返回 0 值对象。 */
-export async function getRepoMeta(cwd: string): Promise<RepoMeta> {
+/**
+ * 仓库元信息：提交数 / 贡献者数 / 首次与最近提交日期。失败时返回 0 值对象。
+ * 传入 since（YYYY-MM-DD）时只统计该日期起（含当日）的提交，对应 git --since。
+ */
+export async function getRepoMeta(
+  cwd: string,
+  options: { since?: string } = {},
+): Promise<RepoMeta> {
+  const sinceArgs = options.since ? [`--since=${options.since}`] : [];
   try {
-    const count = Number((await runGit(["rev-list", "--count", "HEAD"], cwd)).trim());
-    const authors = await runGit(["shortlog", "-sn", "HEAD"], cwd);
+    const count = Number(
+      (await runGit(["rev-list", "--count", ...sinceArgs, "HEAD"], cwd)).trim(),
+    );
+    const authors = await runGit(
+      ["shortlog", "-sn", ...sinceArgs, "HEAD"],
+      cwd,
+    );
     const authorCount = authors.split("\n").filter(Boolean).length;
-    const last = (await runGit(["log", "-1", "--format=%ad", "--date=short"], cwd)).trim();
-    const first = (
-      await runGit(["log", "--reverse", "--format=%ad", "--date=short", "-1"], cwd)
+    const last = (
+      await runGit(
+        ["log", "-1", ...sinceArgs, "--format=%ad", "--date=short", "HEAD"],
+        cwd,
+      )
     ).trim();
+    // 注意：git log 的 -n 在 --reverse 之前生效（-1 会取到最新一条再翻转），
+    // 因此首个提交日期必须取反向输出的首行，不能加 -1
+    const firstOut = await runGit(
+      ["log", "--reverse", ...sinceArgs, "--format=%ad", "--date=short", "HEAD"],
+      cwd,
+    );
+    const first = (firstOut.split("\n")[0] ?? "").trim();
     return {
       commitCount: Number.isFinite(count) ? count : 0,
       authorCount,
       firstCommitDate: first || undefined,
       lastCommitDate: last || undefined,
+      since: options.since,
     };
   } catch {
     return { commitCount: 0, authorCount: 0 };

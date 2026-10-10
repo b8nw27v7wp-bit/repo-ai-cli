@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { intro } from "@clack/prompts";
 import { getLog, getLatestTag, type CommitEntry } from "../lib/git.js";
+import { renderCompactChangelog } from "../lib/changelog-compact.js";
 import { chatCompletion, streamChatCompletion, llmConfigFromOptions } from "../lib/llm.js";
 import { buildChangelogPrompt } from "../prompts/changelog.js";
 import { writeOutput } from "../lib/output.js";
@@ -29,6 +30,7 @@ async function defaultRange(cwd: string): Promise<{ range?: string; label: strin
 /**
  * repo-ai changelog — 根据 git log 生成 CHANGELOG.md。
  * 默认区间：最近一个 tag 之后；无 tag 则最近 50 条。
+ * --format keep-a-changelog（默认）走 AI 生成；--format compact 本地逐行渲染、不调用 LLM。
  */
 export async function runChangelog(options: ChangelogOptions): Promise<void> {
   setJsonMode(options.json === true);
@@ -36,13 +38,17 @@ export async function runChangelog(options: ChangelogOptions): Promise<void> {
   if (interactive && !isJsonMode()) intro("repo-ai changelog");
 
   const language = parseEnum(options.language, ["zh", "en"] as const, "language", "zh");
+  const format = parseEnum(
+    options.format,
+    ["keep-a-changelog", "compact"] as const,
+    "format",
+    "keep-a-changelog",
+  );
+  // 参数非法时必须先返回，不能先启动进度条（否则报错后会多打一行 "读取 git log..."）
+  if (!language || !format) return;
 
   const cwd = process.cwd();
   const progressBar = progress("读取 git log...");
-  if (!language) {
-    progressBar.stop();
-    return;
-  }
 
   let range = options.range;
   let rangeLabel: string;
@@ -88,6 +94,7 @@ export async function runChangelog(options: ChangelogOptions): Promise<void> {
       emitJson({
         ok: true,
         dryRun: true,
+        format,
         range: rangeLabel,
         commits: commits.length,
         existingChangelog: existingHeader ? true : false,
@@ -97,10 +104,34 @@ export async function runChangelog(options: ChangelogOptions): Promise<void> {
     }
     progressBar.stop();
     say(`range: ${rangeLabel}`);
+    say(`format: ${format}`);
     say(`commits: ${commits.length}`);
     say(`existing changelog: ${existingHeader ? "found" : "none"}`);
     say(`output: ${existingPath}`);
     done("dry-run 完成，未调用 API");
+    return;
+  }
+
+  // compact：纯本地逐行渲染，不调用 LLM（适合 CHANGELOG 已经很长、只要一行式摘要的项目）
+  if (format === "compact") {
+    const content = renderCompactChangelog(path.basename(cwd), commits);
+    progressBar.stop("compact 渲染完成");
+    if (options.print) {
+      if (isJsonMode()) emitJson({ ok: true, format, content });
+      else console.log(content);
+      return;
+    }
+    const abs = await writeOutput(content + "\n", existingPath);
+    if (isJsonMode()) {
+      emitJson({
+        ok: true,
+        format,
+        output: abs,
+        bytes: Buffer.byteLength(content, "utf8") + 1,
+      });
+      return;
+    }
+    done(`CHANGELOG (compact) 已写入: ${abs}`);
     return;
   }
 

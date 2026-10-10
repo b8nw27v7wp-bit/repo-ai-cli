@@ -5,6 +5,7 @@ import path from "node:path";
 import {
   intOption,
   temperatureOption,
+  dateOption,
   parseEnum,
   readTextCapped,
 } from "../src/lib/options.js";
@@ -33,6 +34,25 @@ describe("temperatureOption", () => {
     expect(() => temperatureOption()("2.5")).toThrow();
     expect(() => temperatureOption()("-0.1")).toThrow();
     expect(() => temperatureOption()("hot")).toThrow();
+  });
+});
+
+describe("dateOption", () => {
+  it("接受合法 YYYY-MM-DD（含闰日）", () => {
+    expect(dateOption()("2026-01-01")).toBe("2026-01-01");
+    expect(dateOption()("2024-02-29")).toBe("2024-02-29"); // 闰年
+    expect(dateOption()("2000-02-29")).toBe("2000-02-29"); // 400 年规则
+    expect(dateOption()("2026-12-31")).toBe("2026-12-31");
+  });
+
+  it("拒绝格式错误与不存在的日期", () => {
+    expect(() => dateOption()("2026-1-1")).toThrow();
+    expect(() => dateOption()("2026/01/01")).toThrow();
+    expect(() => dateOption()("abc")).toThrow();
+    expect(() => dateOption()("")).toThrow();
+    expect(() => dateOption()("2026-02-30")).toThrow(); // 2 月无 30 日
+    expect(() => dateOption()("2026-13-01")).toThrow(); // 无 13 月
+    expect(() => dateOption()("2025-02-29")).toThrow(); // 非闰年
   });
 });
 

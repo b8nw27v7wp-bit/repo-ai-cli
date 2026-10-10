@@ -36,7 +36,7 @@ import {
   runConfigRemoveProfile,
 } from "./commands/config.js";
 import { setVerbose } from "./lib/log.js";
-import { intOption, temperatureOption } from "./lib/options.js";
+import { intOption, temperatureOption, dateOption } from "./lib/options.js";
 import pkg from "../package.json" with { type: "json" };
 
 const program = new Command();
@@ -162,6 +162,7 @@ const changelogCmd = withLLMOptions(
     .option("-r, --range <range>", "git range (v1.0.0.. / ..HEAD / 1.0.0..2.0.0); default: last tag..HEAD")
     .option("-n, --max <n>", "max commits to consider", intOption(), 50)
     .option("-l, --language <lang>", "zh | en", "zh")
+    .option("--format <fmt>", "output format: keep-a-changelog | compact (compact is local, no LLM)", "keep-a-changelog")
     .option("--dry-run", "print stats only, do not call API")
     .option("--print", "print changelog without writing file")
     .option("--json", "output machine-readable JSON")
@@ -177,6 +178,7 @@ changelogCmd.action(async (opts: Record<string, unknown>) => {
       max: opts.max as number,
       output: opts.output as string,
       language: opts.language as "zh" | "en",
+      format: opts.format as string | undefined,
       dryRun: Boolean(opts.dryRun),
       print: Boolean(opts.print),
       json: Boolean(opts.json),
@@ -397,11 +399,16 @@ const statsCmd = program
   .command("stats")
   .description("Show repo stats: files, lines, languages, commits (offline)")
   .argument("[path]", "directory to analyze (default: current dir)", ".")
+  .option("--since <date>", "only count commits since this date (YYYY-MM-DD, inclusive)", dateOption())
   .option("--json", "output machine-readable JSON");
 
 statsCmd.action(async (target: string, opts: Record<string, unknown>) => {
   try {
-    await runStats({ target, json: Boolean(opts.json) });
+    await runStats({
+      target,
+      since: opts.since as string | undefined,
+      json: Boolean(opts.json),
+    });
   } catch (err) {
     handleError(err, Boolean(opts.json));
   }

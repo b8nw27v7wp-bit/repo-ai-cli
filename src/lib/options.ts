@@ -31,6 +31,28 @@ export function temperatureOption(): (v: string) => number {
   };
 }
 
+/** commander 解析器：YYYY-MM-DD 日期（校验真实日历日，如 2026-02-30 非法） */
+export function dateOption(): (v: string) => string {
+  return (v: string) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+    if (!m) {
+      throw new InvalidArgumentError(`必须是 YYYY-MM-DD 格式的日期，收到: ${v}`);
+    }
+    const year = Number(m[1]);
+    const month = Number(m[2]);
+    const day = Number(m[3]);
+    const d = new Date(Date.UTC(year, month - 1, day));
+    if (
+      d.getUTCFullYear() !== year ||
+      d.getUTCMonth() !== month - 1 ||
+      d.getUTCDate() !== day
+    ) {
+      throw new InvalidArgumentError(`不是真实存在的日期，收到: ${v}`);
+    }
+    return v;
+  };
+}
+
 /** 命令内枚举校验；合法返回取值，非法 fail() 后返回 null */
 export function parseEnum<T extends string>(
   value: string | undefined,

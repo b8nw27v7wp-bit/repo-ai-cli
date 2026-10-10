@@ -15,6 +15,7 @@ import type { StatsOptions } from "../types.js";
 
 /**
  * repo-ai stats — 仓库统计（文件 / 行数 / 语言 / 提交信息，离线）。
+ * --since <date> 只统计该日期起（含当日）的提交与贡献者。
  */
 export async function runStats(options: StatsOptions): Promise<void> {
   setJsonMode(options.json === true);
@@ -34,7 +35,7 @@ export async function runStats(options: StatsOptions): Promise<void> {
   }
 
   const progressBar = progress("统计中...");
-  const stats = await getRepoStats(dir);
+  const stats = await getRepoStats(dir, { since: options.since });
   progressBar.stop();
 
   if (isJsonMode()) {
@@ -46,6 +47,7 @@ export async function runStats(options: StatsOptions): Promise<void> {
   if (stats.repo) {
     console.log(
       `提交: ${stats.repo.commitCount}  贡献者: ${stats.repo.authorCount}` +
+        (stats.repo.since ? `  自 ${stats.repo.since}` : "") +
         (stats.repo.firstCommitDate
           ? `  ${stats.repo.firstCommitDate} ~ ${stats.repo.lastCommitDate ?? ""}`
           : ""),

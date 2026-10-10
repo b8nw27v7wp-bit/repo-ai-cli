@@ -54,8 +54,12 @@ async function walk(dir: string, base: string): Promise<string[]> {
 /**
  * 统计目录：文件数、总行数、按语言归类（跳过二进制与常见生成目录）。
  * 若在 git 仓库内，附带提交数 / 贡献者数 / 首次与最近提交日期。
+ * 传入 options.since（YYYY-MM-DD）时 git 元信息只统计该日期起的提交。
  */
-export async function getRepoStats(rootDir: string): Promise<RepoStats> {
+export async function getRepoStats(
+  rootDir: string,
+  options: { since?: string } = {},
+): Promise<RepoStats> {
   const relPaths = await walk(rootDir, rootDir);
 
   const langMap = new Map<string, { files: number; lines: number }>();
@@ -91,7 +95,7 @@ export async function getRepoStats(rootDir: string): Promise<RepoStats> {
   let repo: RepoMeta | undefined;
   try {
     await assertInGitRepo(rootDir);
-    repo = await getRepoMeta(rootDir);
+    repo = await getRepoMeta(rootDir, { since: options.since });
   } catch {
     /* 非 git 仓库则无元信息 */
   }

@@ -244,6 +244,9 @@ repo-ai-cli changelog --range v0.1.0..v0.2.0
 # Print to stdout without writing the file
 repo-ai-cli changelog --print
 
+# Compact format: one line per commit, rendered locally without calling any LLM
+repo-ai-cli changelog --format compact --print
+
 # English output
 repo-ai-cli changelog -l en
 ```
@@ -542,6 +545,7 @@ repo-ai-cli init my-cli --json
 | `-r, --range <range>` | Git range (`v1.0.0..` / `..HEAD` / `1.0.0..2.0.0`) | last tag..HEAD |
 | `-n, --max <n>` | Max commits to consider | `50` |
 | `-l, --language <lang>` | Output language: `zh` \| `en` | `zh` |
+| `--format <fmt>` | Output format: `keep-a-changelog` (AI) \| `compact` (one line per commit, local, no LLM) | `keep-a-changelog` |
 | `--dry-run` | Print statistics only, do not call the API | `false` |
 | `--print` | Print to stdout without writing file | `false` |
 | `--json` | Output machine-readable JSON | `false` |
@@ -649,6 +653,7 @@ per-provider API key status (offline), proxy env vars. Fix hints included.
 | Option | Description | Default |
 |--------|-------------|---------|
 | `[path]` | Directory to analyze | `.` (current directory) |
+| `--since <date>` | Only count commits since this date (`YYYY-MM-DD`, inclusive) | full history |
 | `--json` | Output machine-readable JSON | `false` |
 
 #### `repo-ai-cli deps`
