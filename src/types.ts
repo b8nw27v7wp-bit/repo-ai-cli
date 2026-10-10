@@ -173,6 +173,27 @@ export interface DoctorOptions {
   json?: boolean;
 }
 
+export interface ReviewPrOptions {
+  /** PR 引用：https://github.com/owner/repo/pull/123、owner/repo#123、owner/repo/pull/123 */
+  target: string;
+  /** 审查维度：all | bugs | security | style | perf（默认 all） */
+  focus?: string;
+  /** 输出文件（默认打印到 stdout） */
+  output?: string;
+  /** diff 截断上限（KB） */
+  maxDiffKb?: number;
+  provider?: string;
+  baseUrl?: string;
+  model?: string;
+  apiKey?: string;
+  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
+  profile?: string;
+  maxOutputTokens?: number;
+  temperature?: number;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
 export interface GitignoreOptions {
   /** 模板 id 列表（node/python/go/...），空则报错提示 --list */
   templates?: string[];

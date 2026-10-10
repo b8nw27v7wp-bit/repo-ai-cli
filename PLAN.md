@@ -365,7 +365,7 @@ jobs:
 | ~~P1~~ ✅ | 多 provider 补齐 | v0.6.0 完成：+Ollama（本地无 key）/OpenRouter/Groq/火山方舟/Gemini，共 13 家 |
 | ~~P2~~ ✅ | `--verbose` 全局调试 | v0.6.0 完成：统一 debug 日志（stderr），覆盖网络/配置/克隆 |
 | ~~P2~~ ✅ | 配置文件 profile | v0.6.0 完成：多套 provider/model 配置切换（`config use work` / `--profile work`） |
-| P2 | GitHub PR review | `review-pr <url>` 拉取线上 PR 的 diff 做审查 |
+| ~~P2~~ ✅ | GitHub PR review | v0.7.0 完成：`review-pr <pr>` 经 GitHub 公开 API 拉取 PR diff（原生 fetch，无需 gh CLI、零新增依赖），prompt / 分级 / 截断语义与 `review` 共用；`--json` 附带 PR 元信息 |
 
 ---
 
@@ -386,8 +386,8 @@ jobs:
 ## 10. 简历条目（预写）
 
 > **repo-ai-cli** — TypeScript CLI 工具（npm 发布，GitHub Actions 自动 CI/CD）
-> 23 条命令覆盖仓库助手全场景：AI 生成双语 README / 规范 commit / CHANGELOG / 代码审查 / 解释 / PR 描述 / 文档翻译 / 单元测试 / 重构建议 / bug 定位 / 代码库问答（RAG） / README 徽章 / 贡献指南，以及离线的密钥扫描 / 环境体检 / .gitignore / LICENSE / 仓库统计 / 依赖解析（--outdated / --audit）/ 项目脚手架 / git 钩子 / 语义化版本发布；实现 token 预算控制、.gitignore 感知文件收集、LLM 重试与流式输出、GitHub 仓库浅克隆（含镜像回退）、多 profile 配置切换、--verbose 调试日志；支持 13 家国内外 LLM 提供商（DeepSeek/OpenAI/Kimi/GLM/通义/MiniMax/Grok/硅基流动/Ollama 本地/OpenRouter/Groq/火山方舟/Gemini）及任意 OpenAI 兼容端点；BYOK 零服务端成本；236 单测覆盖核心逻辑。
+> 24 条命令覆盖仓库助手全场景：AI 生成双语 README / 规范 commit / CHANGELOG / 代码审查 / 解释 / PR 描述 / 文档翻译 / 单元测试 / 重构建议 / bug 定位 / 代码库问答（RAG） / README 徽章 / 贡献指南，以及离线的密钥扫描 / 环境体检 / .gitignore / LICENSE / 仓库统计 / 依赖解析（--outdated / --audit）/ 项目脚手架 / git 钩子 / 语义化版本发布；实现 token 预算控制、.gitignore 感知文件收集、LLM 重试与流式输出、GitHub 仓库浅克隆（含镜像回退）、多 profile 配置切换、--verbose 调试日志；支持 13 家国内外 LLM 提供商（DeepSeek/OpenAI/Kimi/GLM/通义/MiniMax/Grok/硅基流动/Ollama 本地/OpenRouter/Groq/火山方舟/Gemini）及任意 OpenAI 兼容端点；BYOK 零服务端成本；296 单测覆盖核心逻辑。
 
 ---
 
-*计划版本：v1.0 · 2026-07-31 · M1-M15 已全部完成（v0.6.0，23 条命令 / 13 家 provider / 236 测试）；本文件已按当前实现回写口径，后续变更需同步更新*
+*计划版本：v1.0 · 2026-07-31 · M1-M15 已全部完成（v0.7.0，24 条命令 / 13 家 provider / 296 测试）；本文件已按当前实现回写口径，后续变更需同步更新*

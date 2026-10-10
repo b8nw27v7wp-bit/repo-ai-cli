@@ -1,8 +1,8 @@
 # repo-ai-cli
 
-**AI-powered repository helper CLI: 23 commands to generate bilingual READMEs, conventional commits, CHANGELOGs, code reviews, tests, docs, PRs and more — plus offline utilities for secrets, stats, deps audit, gitignore, LICENSE, badges and git hooks.**
+**AI-powered repository helper CLI: 24 commands to generate bilingual READMEs, conventional commits, CHANGELOGs, code reviews, tests, docs, PRs and more — plus offline utilities for secrets, stats, deps audit, gitignore, LICENSE, badges and git hooks.**
 
-**AI 驱动的仓库助手 CLI：23 条命令覆盖仓库全流程 —— 生成双语 README、规范 commit、CHANGELOG、代码审查、单元测试、文档翻译、PR 描述、代码库问答，以及密钥扫描、仓库统计、依赖审计、.gitignore / LICENSE / 徽章 / 贡献指南生成、git 钩子等离线工具。**
+**AI 驱动的仓库助手 CLI：24 条命令覆盖仓库全流程 —— 生成双语 README、规范 commit、CHANGELOG、代码审查、单元测试、文档翻译、PR 描述、代码库问答，以及密钥扫描、仓库统计、依赖审计、.gitignore / LICENSE / 徽章 / 贡献指南生成、git 钩子等离线工具。**
 
 [![CI](https://github.com/b8nw27v7wp-bit/repo-ai-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/b8nw27v7wp-bit/repo-ai-cli/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/repo-ai-cli.svg)](https://www.npmjs.com/package/repo-ai-cli)
@@ -11,6 +11,33 @@
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20-339933?logo=node.js)](https://nodejs.org/)
 
 > ⚡ 本 README 由 repo-ai-cli 自己生成（dogfooding）—— 下面就是它的真实输出效果。
+
+---
+
+## 三分钟上手 — Three-Minute Quickstart
+
+无需安装：一条 npx 命令 + 一个环境变量即可跑通（需 Node.js ≥ 20）。
+
+```bash
+# 1. 设置一家提供商的 API Key（示例用 DeepSeek；其他提供商见下方 Quick Start）
+export DEEPSEEK_API_KEY=sk-xxx        # macOS / Linux
+# $env:DEEPSEEK_API_KEY="sk-xxx"      # Windows PowerShell
+
+# 2. 进入任意 git 仓库目录，npx 自动下载并运行（不写入全局）
+npx repo-ai-cli readme
+```
+
+不想覆盖现有 README：先 `npx repo-ai-cli readme --dry-run` 只看统计、不调用 API，或用 `-o README.gen.md` 输出到别的文件。
+
+完全离线、零配置也能立刻试的命令：
+
+```bash
+npx repo-ai-cli doctor    # 环境体检
+npx repo-ai-cli secrets   # 离线扫描硬编码密钥
+npx repo-ai-cli stats     # 行数 / 语言 / 提交统计
+```
+
+准备长期使用时再 `npm install -g repo-ai-cli`；完整安装、Key 配置与全部 24 条命令见下方 Quick Start — 快速开始。
 
 ---
 
@@ -28,8 +55,8 @@
 - ⚙️ **Persistent Config** — Save your provider, API key and defaults once with `repo-ai-cli config set`, no more env vars every time.
   **配置持久化** — 用 `repo-ai-cli config set` 一次保存提供商、API key 与默认参数，无需每次设置环境变量。
 
-- 🔍 **AI Code Review** — Review your git diff with a single command, getting a severity-ranked (Critical/Major/Minor/Nit) report with fix suggestions, optionally scoped to bugs/security/style/perf.
-  **AI 代码审查** — 用 `repo-ai-cli review` 一键审查你的 git diff，输出按严重程度分级的问题报告与修复建议，可聚焦 bug/安全/风格/性能。
+- 🔍 **AI Code Review** — Review your git diff with a single command, getting a severity-ranked (Critical/Major/Minor/Nit) report with fix suggestions, optionally scoped to bugs/security/style/perf. `review-pr` reviews a remote GitHub PR the same way, with no `gh` CLI required.
+  **AI 代码审查** — 用 `repo-ai-cli review` 一键审查你的 git diff，输出按严重程度分级的问题报告与修复建议，可聚焦 bug/安全/风格/性能。`repo-ai-cli review-pr` 以同样方式审查线上 GitHub PR，无需安装 `gh` CLI。
 
 - 💡 **Explain Code** — Point at a file (or a `file:line` region) and get a plain-language walkthrough of what it does and why.
   **代码解释** — 用 `repo-ai-cli explain src/lib/git.ts:38` 快速理解一段陌生代码的作用与逻辑。
@@ -112,7 +139,7 @@
 
 > 📝 本 README 由 repo-ai-cli 自己生成（dogfooding）——上面的示例就是它的真实输出效果。
 > 
-> 录屏 GIF 待补充（clack spinner + 交互确认流演示）。
+> 录屏 GIF 待补充 —— 录制步骤与分镜脚本见 [docs/gif-录制指南.md](docs/gif-录制指南.md)（需由维护者本地真实录屏，产出后放入 docs/assets/ 并在本节引用）。
 
 ---
 
@@ -568,6 +595,39 @@ repo-ai-cli init my-cli --json
 | `--max-diff-kb <n>` | Maximum diff size to process (in KB) | `200` |
 | `--max-output-tokens <n>` | Max LLM output tokens | `4096` |
 | `--temperature <n>` | Sampling temperature 0~2 | `0.3` |
+| `--provider <id>` | LLM provider (same as `readme`) | auto-detect |
+| `--base-url <url>` | Custom OpenAI-compatible endpoint | provider default |
+| `--model <name>` | Model name override | provider default |
+
+#### `repo-ai-cli review-pr`
+
+Review a remote GitHub pull request. Fetches the PR diff through the public GitHub API with native `fetch` — no `gh` CLI, no extra dependency. The review prompt, severity ranking and truncation semantics are shared with `review`.
+
+审查一个线上 GitHub PR。通过 GitHub 公开 API 拉取 diff（原生 `fetch`），无需 `gh` CLI、无额外依赖；审查 prompt、严重程度分级与截断语义与 `review` 完全共用。
+
+```bash
+# Full PR URL
+repo-ai-cli review-pr https://github.com/owner/repo/pull/123
+
+# owner/repo#number shorthand
+repo-ai-cli review-pr b8nw27v7wp-bit/repo-ai-cli#3
+
+# Focus on security, write the report to a file
+repo-ai-cli review-pr owner/repo#123 --focus security -o review.md
+
+# Machine-readable, with PR metadata (title / author / branch / state / draft)
+repo-ai-cli review-pr owner/repo#123 --json
+```
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `<pr>` | PR reference: `https://github.com/owner/repo/pull/123`, `owner/repo#123`, `owner/repo/pull/123` | required |
+| `--focus <area>` | Review focus: `all` \| `bugs` \| `security` \| `style` \| `perf` | `all` |
+| `-o, --output <file>` | Write review to file (default: stdout) | stdout |
+| `--max-diff-kb <n>` | Maximum diff size to process (in KB) | `200` |
+| `--max-output-tokens <n>` | Max LLM output tokens | `4096` |
+| `--temperature <n>` | Sampling temperature 0~2 | `0.3` |
+| `--json` | Output machine-readable JSON (includes PR metadata) | `false` |
 | `--provider <id>` | LLM provider (same as `readme`) | auto-detect |
 | `--base-url <url>` | Custom OpenAI-compatible endpoint | provider default |
 | `--model <name>` | Model name override | provider default |

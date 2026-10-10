@@ -3,6 +3,7 @@ import { runReadme } from "./commands/readme.js";
 import { runCommit } from "./commands/commit.js";
 import { runChangelog } from "./commands/changelog.js";
 import { runReview } from "./commands/review.js";
+import { runReviewPr } from "./commands/review-pr.js";
 import { runExplain } from "./commands/explain.js";
 import { runPr } from "./commands/pr.js";
 import { runInit } from "./commands/init.js";
@@ -221,6 +222,40 @@ reviewCmd.action(async (opts: Record<string, unknown>) => {
       maxDiffKb: opts.maxDiffKb as number,
       maxOutputTokens: opts.maxOutputTokens as number,
       temperature: opts.temperature as number,
+      provider: opts.provider as string | undefined,
+      baseUrl: opts.baseUrl as string | undefined,
+      model: opts.model as string | undefined,
+      apiKey: opts.apiKey as string | undefined,
+      profile: opts.profile as string | undefined,
+    });
+  } catch (err) {
+    handleError(err, Boolean(opts.json));
+  }
+});
+
+const reviewPrCmd = withLLMOptions(
+  program
+    .command("review-pr")
+    .description("AI code review of a GitHub pull request (no gh CLI required)")
+    .argument("<pr>", "PR url (github.com/owner/repo/pull/123), owner/repo#123 or owner/repo/pull/123")
+    .option("--focus <area>", "bugs|security|style|perf|all", "all")
+    .option("-o, --output <file>", "write review to file (default: stdout)")
+    .option("--max-diff-kb <n>", "max diff size in KB", intOption(), 200)
+    .option("--max-output-tokens <n>", "max LLM output tokens", intOption(), 4096)
+    .option("--temperature <n>", "sampling temperature 0~2", temperatureOption(), 0.3)
+    .option("--json", "output machine-readable JSON"),
+);
+
+reviewPrCmd.action(async (pr: string, opts: Record<string, unknown>) => {
+  try {
+    await runReviewPr({
+      target: pr,
+      focus: opts.focus as string | undefined,
+      output: opts.output as string | undefined,
+      maxDiffKb: opts.maxDiffKb as number,
+      maxOutputTokens: opts.maxOutputTokens as number,
+      temperature: opts.temperature as number,
+      json: Boolean(opts.json),
       provider: opts.provider as string | undefined,
       baseUrl: opts.baseUrl as string | undefined,
       model: opts.model as string | undefined,
