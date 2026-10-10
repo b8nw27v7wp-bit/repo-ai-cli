@@ -1,5 +1,41 @@
 # repo-ai-cli
 
+## 0.7.0
+
+### Minor Changes
+
+- 6f33a46: doctor 体检升级：配置文件合法性校验（坏 JSON 从静默吞错改为明确报 fail）、逐 provider API key 状态矩阵（13 家全列，仅离线检查非空与前缀）、激活 profile 存在性检查、网络代理环境变量状态、未通过项附修复建议；--json 模式在有 fail 项时退出码改为 1（与文本模式一致，CI 门禁可用）
+- 4ae3566: 离线能力扩充（P1-3）：changelog 新增 `--format compact`（每条 commit 一行、纯本地渲染不调用 LLM，默认仍是 Keep-a-Changelog 风格不变）；stats 新增 `--since <date>` 按时间窗口统计提交与贡献者；`gitignore --list --json` 补命令级测试固定输出形状。
+- 7bb13a6: feat: 新增 `review-pr` —— 审查线上 GitHub PR
+
+  - `repo-ai-cli review-pr <pr>`：支持完整 URL（`https://github.com/owner/repo/pull/123`）、`owner/repo#123`、`owner/repo/pull/123` 三种引用格式
+  - diff 经 GitHub 公开 API 拉取（原生 `fetch`），**无需安装 gh CLI、零新增依赖**；匿名可读公开仓库，403/429 给出限流提示与 `GITHUB_TOKEN` 建议
+  - 审查 prompt、严重程度分级（Critical/Major/Minor/Nit）、diff 截断语义与 `review` 完全共用，不另起一套审查逻辑
+  - `--json` 除审查结论外附带 PR 元信息（title/author/branch/baseBranch/state/draft/files/truncated）；PR 上下文头只走 stderr，stdout 保持可管道
+  - 支持 `--focus`、`-o`、`--max-diff-kb` 及全部 LLM provider/profile 选项
+
+  命令总数 23 → 24。测试 276 → 296。
+
+### Patch Changes
+
+- 71b4258: fix: 参数校验、输出纯净与预算会计收敛
+
+  - 修复 `review --focus` 帮助文案（`bug`→`bugs`），与实现保持一致
+  - 修复 `secrets --json` 命中时缺退出码 1（CI 门禁失效）；修复 `config set --provider` 非法值在 `--json` 下走文本报错且仍被保存的问题
+  - 修复 `getDiff --all` 预算翻倍：tracked/untracked 共用预算池，合并后重算 `truncated`，`files` 只列实际输出内容
+  - stdout 纯净化：`say`/`done`/非 TTY 进度改走 stderr；`commit` 非 TTY 只打印 message
+  - 新增 `src/lib/options.ts`：commander 解析期拒绝非法数值（`intOption`/`temperatureOption`），命令内枚举统一 `parseEnum`，文件读取统一 `readTextCapped`（行边界截断）
+  - `release` 严格校验（非法 semver/无 package.json/tag 已存在）；hooks 时间戳备份 + 卸载恢复
+  - 新增 `npm run docs:check`（CLI surface 与 README 一致性检查）并接入 CI
+
+- c5da46c: fix: 敏感文件过滤 —— 不再把含明文密钥的文件作为 LLM 材料
+
+  - `readme` / `ask` / `fix` 收集项目材料时，文件名敏感（`.env*`、`*.env`、私钥、证书容器、`id_rsa`）或内容命中密钥模式（GitHub/AWS/PEM/OpenAI/Bearer，含带引号与无引号赋值）的文件不再发送给 LLM，被排除的文件逐一 warn 上报，`--json` 模式下静默
+  - 内容检测按形态而非长度判定：属性访问、camelCase 标识符、连字符词组、下划线标识符、占位符一律放行，经 4 个真实仓库标定误伤为 0
+  - `.env.example` / `.env.sample` / `.env.template` 公开模板显式放行（此前会被扩展名白名单静默丢弃）
+  - `secrets` 命令的打码对纯数字值改用首尾各 2 位（原为 4 位，短秘密空间下暴露过多明文）
+  - 测试 236 → 242
+
 ## 0.6.0
 
 ### Minor Changes
