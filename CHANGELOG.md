@@ -1,5 +1,67 @@
 # repo-ai-cli
 
+## 0.8.0
+
+### Minor Changes
+
+- fac9eda: 新增 4 条仓库级智能命令，把「仓库」从命令的输入升级为可分析对象。全部零新增运行时依赖；三条离线命令不调用 LLM、不联网。
+
+  - **`map` 仓库地图（离线）**：语言分布、入口文件、模块分组与限深目录树，一屏看清仓库结构；支持 `--depth` / `--focus` / `--json`。
+  - **`impact` 变更影响分析（离线）**：新增文件级 import 图（支持 ESM 的 `.js → .ts` 映射、无扩展名与 `index` 解析、Python 相对导入含 `from . import x`），反向找出受影响的文件与测试；`--diff` 直接分析暂存改动，**删除与重命名也能算出影响面**（重命名同时分析新旧路径）。
+  - **`health` 仓库健康审计（离线）**：一次检查社区文件、CI、测试、包元数据、大文件与疑似密钥；`package.json` 损坏或缺关键字段（含 `name`）会明确报出。`--strict` 可接入 CI，`--network` 才做依赖更新与漏洞检查。与 `doctor` 的分工是「仓库本身」vs「本机环境」。
+  - **`onboard` 上手导读（AI）**：生成 `ONBOARDING.md`（架构地图、模块职责、运行与测试、从哪开始改），落盘前做结构校验，不合格不写文件。
+
+  命令总数 24 → **28**（叶子 33 → 37）。新增 `src/lib/repo-index.ts` 作为共享索引层；`collectFiles` 增加 `onSizeSkipped` 回调；`buildFileTree` 支持 `maxDepth`。
+
+- 36bf924: `review-pr --comment`：把审查结论直接发回 PR，不用复制粘贴。
+
+  - **默认只预览**：不带 `--yes` 时只打印将要发布的内容，一个字都不会发出去。
+  - **需要 `GITHUB_TOKEN`**：读公开 PR 是匿名的，发评论需要写权限（公开仓库 `public_repo`，私有仓库 `repo`）；缺失时给出获取与设置指引。
+  - **分级发布**：🔴 Critical / 🟠 Major 各占一条评论，便于在 PR 时间线上单独 resolve；🟡 Minor / 💡 Nit 与整体结论合并成一条，避免刷屏。分级按 markdown 标题切块并识别级别关键词（兼容 emoji、中文级别词、任意标题层级），不是按 emoji 精确匹配。
+  - **交互模式下再加一道确认**：即使带了 `--yes`，TTY 里仍会问一次——误发到公开 PR 不可撤回。
+  - 中途失败即中止（继续发多半会重复报同一个错），但会**如实列出已经发出去的那几条**，因为 PR 上确实已经多了评论。
+  - 每条评论带一行「由 repo-ai-cli review-pr 生成」尾注。
+
+- 36bf924: token 用量可观测：每条调用 LLM 的命令都会报告本次消耗。
+
+  - 非 `--json` 模式向 **stderr** 打一行汇总（`token 用量: 输入 1204 / 输出 38 / 合计 1242`），stdout 产物通道保持干净。
+  - `--json` 模式把用量并入输出对象的 `usage` 字段，不再往 stderr 打。
+  - 缺失时显式给出 `usage: null` / 「未知」，**不用 0 顶替**——「未知」与「0」对按量付费的用户是两个完全不同的信息。
+  - 兼容 `input_tokens` / `output_tokens` 命名，缺 `total` 时自行相加。
+  - 流式路径同样采集（SSE 末帧的 usage），但**不会**为拿到它而添加 `stream_options` 参数：13 家提供商里只要有一家拒绝未知字段，整个流式就废了，代价不成比例。
+  - 不做价格换算——模型价格变动频繁，写死在 CLI 里必然过期。
+
+- 36bf924: 统一「给 LLM 的材料预算」参数命名：`--max-tokens` → `--budget-tokens`（readme / ask / fix），`--max` → `--max-commits`（changelog）。
+
+  同一类语义此前有四种写法（`--max-tokens` / `--max` / `--max-diff-kb` / `--max-file-kb`），从 readme 换到 changelog 时「预算」突然变成提交条数、单位也从 token 变成 KB。只改语义最含混的两个；`--max-diff-kb` 与 `--max-file-kb` 本身表意清楚，保持不动。
+
+  **迁移**：旧名仍然可用，不会立即失效——命中时会向 stderr 打印一行 deprecation 警告，且不出现在 `--help` 中（避免新用户学到旧写法）。新旧同时给出时以新名为准。旧名计划在下个 major 版本移除，届时才构成真正的破坏性变更。
+
+### Patch Changes
+
+- 36bf924: 修复配置文件的 5 个键形同虚设：`config set maxTokens | maxFileKb | maxDiffKb | maxOutputTokens | temperature` 保存成功、`config list` 也显示，但**没有任何命令读取它们**——命令始终走各自的 flag 默认值，用户以为设了默认值却毫无效果，且没有任何提示。
+
+  现在「CLI 参数 > 配置文件 > 内置默认值」这条三层规则完整生效：
+
+  - `maxTokens` → `readme` / `ask` / `fix` 的材料 token 预算
+  - `maxFileKb` → `readme` / `explain` / `translate` / `test` / `refactor` / `ask` / `fix` / `secrets` 的单文件上限
+  - `maxDiffKb` → `commit` / `review` / `review-pr` / `pr` 的 diff 上限
+  - `maxOutputTokens` / `temperature` → 全部 12 条 AI 命令的 LLM 请求参数
+
+  **命令行参数始终优先**：显式传了 `--budget-tokens 48000` 即使恰好等于内置默认值，也不会被配置覆盖。
+
+  顺带修掉一处相关缺陷：通过废弃旧名（`--max-tokens` / `--max`）传值时会丢掉「用户显式给出」的标记，导致配置值静默盖过用户输入。
+
+- dd47015: 收窄收集材料时的密钥启发式：连字符值只有**每一段都是纯字母**时才按「人写词组」放行。
+
+  此前 `sk-live-9f3a2b7c1d4e5f60` 这类「词组前缀 + 随机段」会被当成说明文字放行，整个文件随材料发给第三方 LLM。现在含数字段的连字符值会被判定为密钥，文件不进 LLM 材料，并经 `onSensitiveSkipped` 上报。
+
+  **这是收窄，不是根治**：纯字母的真密钥（`abc-def-ghi-jklmno`）仍会漏报。根治需要熵值 / 字符类混合度启发式，误杀源码的风险与工作量都大得多。已知局限已写进 `src/lib/collect-files.ts` 的注释。
+
+- 36bf924: 修复 `release --bump <level> --tag` 的失败残留：此前先改 `package.json` 版本号、再检查 tag 是否已存在，于是「tag 已存在」这条失败路径会把版本号留在已 bump 的状态——命令报错退出，工作区却被改过了。
+
+  现在 tag 冲突在改版本号之前判定，失败即无副作用。与本仓库其他命令「失败不写半成品」的约定一致（`readme` 落盘前结构校验、`writeOutput` 原子写）。
+
 ## 0.7.0
 
 ### Minor Changes
