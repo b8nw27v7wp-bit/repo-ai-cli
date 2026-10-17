@@ -61,6 +61,29 @@ for (const name of top) {
   }
 }
 
+// README 的 #### 小节顺序必须与 --help 的命令顺序一致。
+// 存在性检查挡不住「新增命令时把 README 小节插错位置」——v0.8 拆分时
+// 两边顺序就曾漂移过（config 被留在末尾），而这类漂移不会让任何门禁变红。
+// 缺小节时上面已经报错，这里只在「全都在、但顺序不同」时才比对，避免重复刷屏。
+const readmeOrder = [...readme.matchAll(/^#### `repo-ai-cli ([\w-]+)`/gm)].map(
+  (m) => m[1],
+);
+if (top.every((name) => readmeOrder.includes(name))) {
+  const firstDiff = readmeOrder.findIndex((name, i) => name !== top[i]);
+  if (firstDiff !== -1) {
+    errors.push(
+      `README 小节顺序与 --help 不一致（第 ${firstDiff + 1} 个起）: ` +
+        `README 为 ${readmeOrder.slice(firstDiff, firstDiff + 3).join(" → ")}，` +
+        `--help 为 ${top.slice(firstDiff, firstDiff + 3).join(" → ")}`,
+    );
+  } else if (readmeOrder.length !== top.length) {
+    errors.push(
+      `README 有 ${readmeOrder.length} 个命令小节，--help 只有 ${top.length} 条命令：` +
+        `多出 ${readmeOrder.slice(top.length).join("、")}`,
+    );
+  }
+}
+
 const leaves = [];
 for (const name of top) {
   if (GROUP_CMDS.has(name)) {

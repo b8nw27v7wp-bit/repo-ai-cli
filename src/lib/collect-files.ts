@@ -196,8 +196,15 @@ const QUOTED_SECRET =
 const PLACEHOLDER_VALUE =
   /^(\$\{|\$|process\.|env|environment|import|require|getenv|\{\{|%|your|my|the|some|all|use|set|from|read|enter|provide|replace|insert|please|must|should|changeme|example|dummy|test|fake|sample|xxxx|\*+|<|=)/i;
 
-/** 连字符词组（纯小写/数字、至少一段连字符）是人写的说明或测试桩，不是随机密钥：`use-environment-variable`、`not-the-token`、`new-password` */
-const LOOKS_LIKE_PHRASE = /^[a-z0-9]+(-[a-z0-9]+)+$/;
+/**
+ * 连字符词组（每一段都只含字母、至少一段连字符）是人写的说明或测试桩，不是随机密钥：
+ * `use-environment-variable`、`not-the-token`、`new-password`。
+ *
+ * 必须每一段都是纯字母：`sk-live-9f3a2b7c1d4e5f60` 这种「词组前缀 + 随机段」是常见
+ * 密钥格式，若允许数字出现在任意段就会整条漏报。收紧后仍会放过纯字母的真密钥
+ * （`abc-def-ghi-jklmno`），见 isPlausibleSecret 的「已知局限」。
+ */
+const LOOKS_LIKE_PHRASE = /^(?:[a-z]+-)+[a-z]+$/;
 
 /** 下划线开头是标识符惯例（`_sesToken`、`__token`），不是密钥 */
 const LEADING_UNDERSCORE = /^_/;
@@ -213,8 +220,10 @@ const CAMEL_IDENTIFIER = /^[a-z][a-z0-9]*[A-Z]/;
  * 判据按形态而非长度，因为长度挡不住 13 位的 `hunter2secret`。
  * 代价不对称：多放行一个文件只是 AI 少看一个文件，错杀核心源码直接伤生成质量。
  *
- * 已知局限：纯小写+连字符的真密钥（`abc-def-ghi-jklmno`）会被当词组放行，
- * JWT 这类点分段高熵串会被当属性访问放行——两者都要更重的启发式，暂不处理。
+ * 已知局限：**纯字母** + 连字符的真密钥（`abc-def-ghi-jklmno`）仍会被当词组放行，
+ * JWT 这类点分段高熵串会被当属性访问放行——两者都要更重的启发式（熵值 / 字符类
+ * 混合度），误杀源码的风险与工作量都大得多，暂不处理。上面的 LOOKS_LIKE_PHRASE
+ * 只收窄了「含数字段」的连字符值，是减少漏报，不是根治。
  */
 function isPlausibleSecret(value: string): boolean {
   if (PLACEHOLDER_VALUE.test(value)) return false;

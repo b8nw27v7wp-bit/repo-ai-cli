@@ -853,6 +853,19 @@ per-provider API key status (offline), proxy env vars. Fix hints included.
 | `--tag` | Create a git tag after `--bump` | `false` |
 | `--json` | Output machine-readable JSON | `false` |
 
+#### `repo-ai-cli config`
+
+| Command | Description |
+|---------|-------------|
+| `config init` | Interactive wizard: pick provider + enter API key |
+| `config set <key> <value>` | Set a value (`provider`/`baseUrl`/`model`/`apiKey`/`maxTokens`/...) |
+| `config get <key>` | Print a value (apiKey masked) |
+| `config list` (`ls`) | Show all persisted config (apiKey masked) |
+| `config unset <key>` | Remove a value |
+| `config reset` | Clear all persisted config |
+
+*配置文件位于 `~/.repo-ai/config.json`（POSIX 0600 权限），apiKey 明文存储但仅在用户目录内。*
+
 #### `repo-ai-cli badges`
 
 | Option | Description | Default |
@@ -868,19 +881,6 @@ per-provider API key status (offline), proxy env vars. Fix hints included.
 | `-l, --language <lang>` | `zh` \| `en` | `zh` |
 | `-f, --force` | Overwrite existing file | `false` |
 | `--json` | Output machine-readable JSON | `false` |
-
-#### `repo-ai-cli config`
-
-| Command | Description |
-|---------|-------------|
-| `config init` | Interactive wizard: pick provider + enter API key |
-| `config set <key> <value>` | Set a value (`provider`/`baseUrl`/`model`/`apiKey`/`maxTokens`/...) |
-| `config get <key>` | Print a value (apiKey masked) |
-| `config list` (`ls`) | Show all persisted config (apiKey masked) |
-| `config unset <key>` | Remove a value |
-| `config reset` | Clear all persisted config |
-
-*配置文件位于 `~/.repo-ai/config.json`（POSIX 0600 权限），apiKey 明文存储但仅在用户目录内。*
 
 ---
 

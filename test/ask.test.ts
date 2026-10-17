@@ -93,7 +93,7 @@ describe("ask 命令: 输出契约", () => {
 });
 
 describe("ask 命令: 密钥不外发（安全契约）", () => {
-  // 密钥值刻意不带连字符：collect-files.ts 的 isPlausibleSecret 把「纯小写+连字符」
+  // 密钥值刻意不带连字符：collect-files.ts 的 isPlausibleSecret 仍会把「纯字母+连字符」
   // 当成人写词组放行（见该文件「已知局限」注释），那是检测启发式的取舍，
   // 不该由命令层用例来断言。这里要守的是「被判定为密钥的文件不会进请求体」。
   const FAKE_KEY = "9f3a2b7c1d4e5f60aa11zz";

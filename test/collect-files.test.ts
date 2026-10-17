@@ -136,6 +136,26 @@ describe("collectFiles", () => {
     expect([...skipped].sort()).toEqual(["service.json", "settings.yaml"]);
   });
 
+  it("连字符值只有每段都是纯字母时才按人写词组放行", async () => {
+    await makeTree({
+      // 全字母词组：放行（错杀源码的代价高于 AI 少看一个文件）
+      "phrase.yaml": [
+        "password: new-password",
+        "token: use-environment-variable",
+        "secret: abc-def-ghi-jklmno", // 纯字母真密钥仍会漏，见「已知局限」
+      ].join("\n"),
+      // 「词组前缀 + 随机段」是常见密钥格式，必须拦下
+      "leak.json": '{"apiKey": "sk-live-9f3a2b7c1d4e5f60"}\n',
+      "app.ts": "export const a = 1;",
+    });
+    const skipped: string[] = [];
+    const files = await collectFiles(tmp, {
+      onSensitiveSkipped: (rel) => skipped.push(rel),
+    });
+    expect(files.map((f) => f.relPath)).toEqual(["app.ts", "phrase.yaml"]);
+    expect(skipped).toEqual(["leak.json"]);
+  });
+
   it("不误杀代码引用、测试桩与文件名含 secret 的源码", async () => {
     await makeTree({
       "lib.ts": [
