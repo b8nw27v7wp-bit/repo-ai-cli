@@ -1,10 +1,10 @@
 import path from "node:path";
 import { intro } from "@clack/prompts";
-import { chatCompletion, llmConfigFromOptions } from "../lib/llm.js";
+import { llmConfigFromOptions } from "../lib/llm.js";
+import { callLlmOrFail } from "../lib/llm-step.js";
 import { readTextCapped } from "../lib/options.js";
 import { buildTranslatePrompt, type TranslateTarget } from "../prompts/translate.js";
 import { parseEnum } from "../lib/options.js";
-import { loadConfig } from "../lib/config.js";
 import { writeOutput } from "../lib/output.js";
 import {
   interactive,
@@ -16,6 +16,7 @@ import {
   fail,
   progress,
 } from "../lib/ui.js";
+import { withUsage } from "../lib/usage.js";
 import type { TranslateOptions } from "../types.js";
 
 const TARGETS: TranslateTarget[] = ["zh", "en", "bilingual"];
@@ -26,11 +27,12 @@ const TARGETS: TranslateTarget[] = ["zh", "en", "bilingual"];
  */
 export async function runTranslate(options: TranslateOptions): Promise<void> {
   setJsonMode(options.json === true);
-  const cfg = await loadConfig(options.profile);
+  // 配置已由 CLI 层解析（CLI 参数 > 配置 > 内置默认），命令层不再读配置文件
+  const cfg = options.resolvedConfig ?? {};
   if (interactive && !isJsonMode()) intro("repo-ai translate");
 
   const abs = path.resolve(options.file);
-  const maxBytes = (options.maxFileKb ?? 200) * 1024;
+  const maxBytes = options.maxFileKb * 1024;
   let content: string;
   let truncated: boolean;
   try {
@@ -55,30 +57,23 @@ export async function runTranslate(options: TranslateOptions): Promise<void> {
     truncated,
   });
 
-  let translated: string;
-  try {
-    translated = (
-      await chatCompletion(messages, llmConfigFromOptions(options, cfg))
-    ).trim();
-  } catch (err) {
-    progressBar.stop("翻译失败");
-    fail((err as Error).message);
-    return;
-  }
+  const translated = await callLlmOrFail(
+    messages,
+    llmConfigFromOptions(options, cfg),
+    progressBar,
+    "翻译失败",
+    (r) => r.trim(),
+  );
+  if (translated === null) return;
   progressBar.stop();
-
-  if (!translated) {
-    fail("AI 返回了空内容，请重试。");
-    return;
-  }
 
   if (options.output) {
     const outAbs = await writeOutput(translated + "\n", options.output);
-    if (isJsonMode()) emitJson({ ok: true, output: outAbs, target });
+    if (isJsonMode()) emitJson(withUsage({ ok: true, output: outAbs, target }));
     else done(`译文已写入: ${outAbs}`);
     return;
   }
 
-  if (isJsonMode()) emitJson({ ok: true, file: relPath, target, content: translated });
+  if (isJsonMode()) emitJson(withUsage({ ok: true, file: relPath, target, content: translated }));
   else console.log(translated);
 }

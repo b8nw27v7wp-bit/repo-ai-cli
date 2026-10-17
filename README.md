@@ -513,6 +513,29 @@ repo-ai-cli init my-cli --json
 # {"ok":true,"template":"ts-cli","directory":".../my-cli","created":["package.json",...]}
 ```
 
+### Token Usage — token 用量
+
+每条调用 LLM 的命令都会报告本次消耗的 token，让你对按量计费心里有数：
+
+```bash
+repo-ai-cli commit --print
+# feat: add config persistence
+# token 用量: 输入 1204 / 输出 38 / 合计 1242      ← stderr，不污染 stdout
+```
+
+`--json` 模式下用量并入输出对象的 `usage` 字段（不再往 stderr 打）：
+
+```bash
+repo-ai-cli commit --json
+# {"ok":true,"message":"...","usage":{"promptTokens":1204,"completionTokens":38,"totalTokens":1242}}
+```
+
+三点说明：
+
+- **不做价格换算**。各家模型价格变动频繁，写死在 CLI 里必然过期；请拿上面的 token 数乘你所用模型的单价自行估算。
+- **`usage: null` 表示「未知」，不是 0**。部分提供商不返回用量；流式模式下多数提供商需要额外参数才返回，本工具不会为此改动请求体（13 家提供商里只要有一家拒绝未知字段，整个流式就废了）。
+- 离线命令（`init` / `secrets` / `doctor` / `stats` / …）与 `--dry-run` 不调用 LLM，输出里不会出现 `usage` 字段——「没调用」与「调用了但未知」是两回事。
+
 ---
 
 ## ⚙️ Configuration — 配置说明
@@ -543,6 +566,8 @@ repo-ai-cli init my-cli --json
 
 ### Command Options — 命令参数
 
+> **参数改名（v0.8）**：`readme` / `ask` / `fix` 的 `--max-tokens` 已更名为 `--budget-tokens`，`changelog` 的 `--max` 已更名为 `--max-commits`。旧名仍可用（会打印一行 deprecation 警告、不出现在 `--help` 里），将在下个 major 版本移除。改名的原因是「预算」一词在四条命令里此前有四种写法，换条命令含义就变。
+
 #### `repo-ai-cli readme`
 
 | Option | Description | Default |
@@ -551,7 +576,7 @@ repo-ai-cli init my-cli --json
 | `-o, --output <file>` | Output file path | `README.md` |
 | `-l, --language <lang>` | Output language: `bilingual` \| `zh` \| `en` | `bilingual` |
 | `--dry-run` | Print statistics only, do not call the API | `false` |
-| `--max-tokens <n>` | Token budget for the LLM call | `48000` |
+| `--budget-tokens <n>` | Token budget for collected files (was `--max-tokens`, deprecated) | `48000` |
 | `--max-file-kb <n>` | Maximum single-file size to include (in KB) | `100` |
 | `--stream` | Stream output token-by-token (TTY only) | `false` |
 | `--provider <id>` | LLM provider: `deepseek` \| `openai` \| `moonshot` \| `zhipu` \| `qwen` \| `minimax` \| `xai` \| `siliconflow` \| `ollama` \| `openrouter` \| `groq` \| `volcengine` \| `gemini` | auto-detect |
@@ -580,7 +605,7 @@ repo-ai-cli init my-cli --json
 |--------|-------------|---------|
 | `-o, --output <file>` | Output file path | `CHANGELOG.md` |
 | `-r, --range <range>` | Git range (`v1.0.0..` / `..HEAD` / `1.0.0..2.0.0`) | last tag..HEAD |
-| `-n, --max <n>` | Max commits to consider | `50` |
+| `-n, --max-commits <n>` | Max commits to consider (was `--max`, deprecated) | `50` |
 | `-l, --language <lang>` | Output language: `zh` \| `en` | `zh` |
 | `--format <fmt>` | Output format: `keep-a-changelog` (AI) \| `compact` (one line per commit, local, no LLM) | `keep-a-changelog` |
 | `--dry-run` | Print statistics only, do not call the API | `false` |
@@ -627,7 +652,21 @@ repo-ai-cli review-pr owner/repo#123 --focus security -o review.md
 
 # Machine-readable, with PR metadata (title / author / branch / state / draft)
 repo-ai-cli review-pr owner/repo#123 --json
+
+# Preview the comments that would be posted (nothing is published)
+repo-ai-cli review-pr owner/repo#123 --comment
+
+# Actually post them (needs GITHUB_TOKEN)
+GITHUB_TOKEN=ghp_xxx repo-ai-cli review-pr owner/repo#123 --comment --yes
 ```
+
+**Posting the review back to the PR** — `--comment` 把审查结论直接发到 PR 上，不用复制粘贴：
+
+- **默认只预览**。不加 `--yes` 时只打印将要发布的内容，一个字都不会发出去。
+- **需要 `GITHUB_TOKEN`**。读公开 PR 是匿名的，但发评论必须有写权限的 token（公开仓库 `public_repo`，私有仓库 `repo`）。缺失时会给出获取与设置指引。
+- **分级发布**：🔴 Critical / 🟠 Major 各占一条评论，便于单独 resolve；🟡 Minor / 💡 Nit 与整体结论合并成一条，避免刷屏。
+- **交互模式下再加一道确认**：即使带了 `--yes`，TTY 里仍会问一次——误发到公开 PR 是不可撤回的。
+- 每条评论带一行「由 repo-ai-cli review-pr 生成」尾注，读者能看出是自动生成的意见。
 
 | Option | Description | Default |
 |--------|-------------|---------|
@@ -637,6 +676,8 @@ repo-ai-cli review-pr owner/repo#123 --json
 | `--max-diff-kb <n>` | Maximum diff size to process (in KB) | `200` |
 | `--max-output-tokens <n>` | Max LLM output tokens | `4096` |
 | `--temperature <n>` | Sampling temperature 0~2 | `0.3` |
+| `--comment` | Post the review as PR comments (needs `GITHUB_TOKEN`; dry-run unless `--yes`) | `false` |
+| `--yes` | Actually post the comments (required in non-interactive mode) | `false` |
 | `--json` | Output machine-readable JSON (includes PR metadata) | `false` |
 | `--provider <id>` | LLM provider (same as `readme`) | auto-detect |
 | `--base-url <url>` | Custom OpenAI-compatible endpoint | provider default |
@@ -784,7 +825,7 @@ per-provider API key status (offline), proxy env vars. Fix hints included.
 | Option | Description | Default |
 |--------|-------------|---------|
 | `<question...>` | Your question about the repository | required |
-| `--max-tokens <n>` | Token budget for collected files | `48000` |
+| `--budget-tokens <n>` | Token budget for collected files (was `--max-tokens`, deprecated) | `48000` |
 | `--max-file-kb <n>` | Max single-file size (in KB) | `100` |
 | `--stream` | Stream the answer token-by-token (TTY only) | `false` |
 | `--json` | Output machine-readable JSON | `false` |
@@ -797,7 +838,7 @@ per-provider API key status (offline), proxy env vars. Fix hints included.
 | Option | Description | Default |
 |--------|-------------|---------|
 | `<description...>` | Bug description / error message | required |
-| `--max-tokens <n>` | Token budget for collected files | `48000` |
+| `--budget-tokens <n>` | Token budget for collected files (was `--max-tokens`, deprecated) | `48000` |
 | `--max-file-kb <n>` | Max single-file size (in KB) | `100` |
 | `--json` | Output machine-readable JSON | `false` |
 | `--provider <id>` | LLM provider (same as `readme`) | auto-detect |
@@ -868,14 +909,24 @@ repo-ai-cli/
 ├── .changeset/                  # Changesets configuration
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml               # Lint + test + build (Node 20/22 matrix)
+│       ├── ci.yml               # Lint + typecheck + coverage + build + docs:check + e2e (Node 20/22)
 │       └── release.yml          # Changesets → npm publish
+├── scripts/
+│   ├── check-docs.mjs           # README ↔ CLI surface consistency check
+│   ├── coverage-report.mjs      # 列出覆盖率最低的文件（指出该补哪儿）
+│   └── e2e-smoke.mjs            # dist-level end-to-end smoke (offline, fake LLM endpoint)
 ├── src/
-│   ├── commands/
+│   ├── cli/                     # CLI 组装层（v0.8 从 index.ts 拆出）
+│   │   ├── program.ts           # program 组装、全局 option、preAction 钩子、命令登记顺序
+│   │   ├── register-ai.ts       # 12 条 AI 命令的注册（option + action 接线）
+│   │   ├── register-offline.ts  # 12 条离线命令的注册（含 hooks / config 子命令组）
+│   │   └── shared.ts            # 共用零件：withLLMOptions / handleError
+│   ├── commands/                # 一条命令一个编排层（读输入 → 组 prompt → 调 LLM → 落盘）
 │   │   ├── readme.ts            # `repo-ai readme` command
 │   │   ├── commit.ts            # `repo-ai commit` command
 │   │   ├── changelog.ts         # `repo-ai changelog` command
 │   │   ├── review.ts            # `repo-ai review` command (code review)
+│   │   ├── review-pr.ts         # `repo-ai review-pr` command (remote PR review)
 │   │   ├── explain.ts           # `repo-ai explain` command (explain code)
 │   │   ├── pr.ts                # `repo-ai pr` command (PR description)
 │   │   ├── init.ts              # `repo-ai init` command (scaffolding)
@@ -892,26 +943,40 @@ repo-ai-cli/
 │   │   ├── ask.ts               # `repo-ai ask` command (codebase Q&A)
 │   │   ├── fix.ts               # `repo-ai fix` command (bug diagnosis)
 │   │   ├── release.ts           # `repo-ai release` command (versioning)
+│   │   ├── badges.ts            # `repo-ai badges` command (README badges)
+│   │   ├── contributing.ts      # `repo-ai contributing` command
 │   │   └── config.ts            # `repo-ai config` command group
 │   ├── lib/
 │   │   ├── collect-files.ts     # File collection & filtering (token control core)
 │   │   ├── file-tree.ts         # Text-based directory tree generation
 │   │   ├── git.ts               # Git diff / staged status reading
 │   │   ├── github.ts            # GitHub URL parsing & shallow cloning
+│   │   ├── github-pr.ts         # PR metadata / diff fetching + review posting
 │   │   ├── llm.ts               # LLM API calls (retry + timeout + streaming)
+│   │   ├── providers.ts         # LLM provider registry (13 providers)
+│   │   ├── config.ts            # ~/.repo-ai/config.json + profiles
+│   │   ├── options.ts           # CLI option parsers + deprecated flag aliases
 │   │   ├── output.ts            # Atomic file writing
 │   │   ├── token-budget.ts      # Token budget allocation & estimation
+│   │   ├── usage.ts             # Token usage accounting (per command)
+│   │   ├── review-parse.ts      # Split a review into severity sections
+│   │   ├── readme-validate.ts   # Pre-write README structure validation
+│   │   ├── changelog-compact.ts # Local (no-LLM) CHANGELOG rendering
+│   │   ├── materials.ts         # File collection + budget (readme/ask/fix shared)
 │   │   ├── templates.ts         # init scaffolding templates (ts-cli / ts-lib)
 │   │   ├── secret-patterns.ts   # Secret detection patterns (offline scan)
 │   │   ├── scan-secrets.ts      # Directory secret scanner
 │   │   ├── doctor.ts            # Environment / repo health checks
+│   │   ├── npm-checks.ts        # npm outdated / audit wrappers
 │   │   ├── gitignore-templates.ts # .gitignore bundled templates
 │   │   ├── licenses.ts          # OSS license templates
+│   │   ├── badges.ts            # README badge generation
+│   │   ├── contributing.ts      # CONTRIBUTING.md generation
 │   │   ├── stats.ts             # Repo statistics (LOC / language / git)
 │   │   ├── deps.ts              # Dependency manifest parsing
 │   │   ├── git-hooks.ts         # Git hook install / uninstall / list
-│   │   ├── materials.ts         # File collection + budget (readme/ask/fix shared)
 │   │   ├── version.ts           # Semantic versioning (suggest / bump)
+│   │   ├── log.ts               # --verbose debug logging
 │   │   └── ui.ts                # Shared UI helpers (spinner / json / say / warn)
 │   ├── prompts/
 │   │   ├── readme.ts            # README generation prompt template
@@ -925,9 +990,11 @@ repo-ai-cli/
 │   │   ├── refactor.ts          # Refactoring suggestions prompt template
 │   │   ├── ask.ts               # Codebase Q&A prompt template
 │   │   └── fix.ts               # Bug diagnosis prompt template
-│   ├── index.ts                 # CLI entry point (commander)
+│   ├── index.ts                 # CLI entry point (10 lines: build & parse)
 │   └── types.ts                 # Shared type definitions
 ├── test/                        # Vitest test files
+│   └── helpers/
+│       └── command-harness.ts   # Command-level test helpers (stub LLM / capture stdio)
 ├── eslint.config.js             # ESLint configuration
 ├── package.json                 # Project manifest
 ├── tsconfig.json                # TypeScript configuration
@@ -965,6 +1032,22 @@ npm run build
 
 # 7. Start development mode (watch)
 npm run dev
+
+# 8. Check README ↔ CLI surface consistency (needs a build first)
+npm run docs:check
+
+# 9. End-to-end smoke on the built artifact (offline, no API key needed)
+npm run e2e
+
+# 10. Coverage (thresholds guard against regressions; see vitest.config.ts)
+npm run coverage
+npm run coverage:report     # 按行覆盖率升序列出最低的文件，指出该补哪儿
+```
+
+Full gate before pushing — CI runs exactly these on Node 20 and 22:
+
+```bash
+npm run typecheck && npm run lint && npm run coverage && npm run build && npm run docs:check && npm run e2e
 ```
 
 ### Project Conventions — 项目约定

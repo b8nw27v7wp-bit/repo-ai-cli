@@ -1,12 +1,12 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { intro } from "@clack/prompts";
-import { chatCompletion, llmConfigFromOptions } from "../lib/llm.js";
+import { llmConfigFromOptions } from "../lib/llm.js";
+import { callLlmOrFail } from "../lib/llm-step.js";
 import {
   buildExplainPrompt,
 } from "../prompts/explain.js";
 import { parseEnum } from "../lib/options.js";
-import { loadConfig } from "../lib/config.js";
 import {
   interactive,
   setJsonMode,
@@ -15,6 +15,7 @@ import {
   fail,
   progress,
 } from "../lib/ui.js";
+import { withUsage } from "../lib/usage.js";
 import type { ExplainOptions } from "../types.js";
 
 interface TargetSpec {
@@ -59,7 +60,8 @@ function withLineNumbers(content: string, startLine = 1): string {
  */
 export async function runExplain(options: ExplainOptions): Promise<void> {
   setJsonMode(options.json === true);
-  const cfg = await loadConfig(options.profile);
+  // 配置已由 CLI 层解析（CLI 参数 > 配置 > 内置默认），命令层不再读配置文件
+  const cfg = options.resolvedConfig ?? {};
   if (interactive && !isJsonMode()) intro("repo-ai explain");
 
   const { file: fileArg, start, end, symbol } = parseTarget(options.target.trim());
@@ -75,7 +77,7 @@ export async function runExplain(options: ExplainOptions): Promise<void> {
     return;
   }
 
-  const maxBytes = (options.maxFileKb ?? 200) * 1024;
+  const maxBytes = options.maxFileKb * 1024;
   const lines = raw.split("\n");
   let content: string;
   let focus: string | undefined;
@@ -118,31 +120,26 @@ export async function runExplain(options: ExplainOptions): Promise<void> {
     language,
   });
 
-  let explanation: string;
-  try {
-    explanation = (
-      await chatCompletion(messages, llmConfigFromOptions(options, cfg))
-    ).trim();
-  } catch (err) {
-    progressBar.stop("解释失败");
-    fail((err as Error).message);
-    return;
-  }
+  const explanation = await callLlmOrFail(
+    messages,
+    llmConfigFromOptions(options, cfg),
+    progressBar,
+    "解释失败",
+    (r) => r.trim(),
+  );
+  if (explanation === null) return;
   progressBar.stop();
 
-  if (!explanation) {
-    fail("AI 返回了空内容，请重试。");
-    return;
-  }
-
   if (isJsonMode()) {
-    emitJson({
-      ok: true,
-      file: relPath,
-      focus: focus ?? null,
-      symbol: symbol ?? null,
-      explanation,
-    });
+    emitJson(
+      withUsage({
+        ok: true,
+        file: relPath,
+        focus: focus ?? null,
+        symbol: symbol ?? null,
+        explanation,
+      }),
+    );
     return;
   }
   console.log(explanation);

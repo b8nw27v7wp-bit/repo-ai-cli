@@ -1,8 +1,8 @@
 import { intro, confirm, select, text } from "@clack/prompts";
 import { getDiff, assertInGitRepo } from "../lib/git.js";
-import { chatCompletion, llmConfigFromOptions } from "../lib/llm.js";
+import { llmConfigFromOptions } from "../lib/llm.js";
+import { callLlmOrFail } from "../lib/llm-step.js";
 import { buildCommitPrompt } from "../prompts/commit.js";
-import { loadConfig } from "../lib/config.js";
 import {
   interactive,
   setJsonMode,
@@ -13,6 +13,7 @@ import {
   fail,
   progress,
 } from "../lib/ui.js";
+import { withUsage } from "../lib/usage.js";
 import type { CommitOptions } from "../types.js";
 
 /** 去掉可能的 ``` 代码块包裹 / 首尾空白 */
@@ -28,7 +29,8 @@ function cleanMessage(raw: string): string {
 
 export async function runCommit(options: CommitOptions): Promise<void> {
   setJsonMode(options.json === true);
-  const cfg = await loadConfig(options.profile);
+  // 配置已由 CLI 层解析（CLI 参数 > 配置 > 内置默认），命令层不再读配置文件
+  const cfg = options.resolvedConfig ?? {};
   if (interactive && !isJsonMode()) intro("repo-ai commit");
 
   const cwd = process.cwd();
@@ -45,7 +47,7 @@ export async function runCommit(options: CommitOptions): Promise<void> {
     diffResult = await getDiff(cwd, {
       staged: options.staged !== false,
       all: options.all ?? false,
-      maxBytes: (options.maxDiffKb ?? 200) * 1024,
+      maxBytes: options.maxDiffKb * 1024,
     });
   } catch (err) {
     fail((err as Error).message);
@@ -76,27 +78,19 @@ export async function runCommit(options: CommitOptions): Promise<void> {
 
   const llmConfig = llmConfigFromOptions(options, cfg);
 
-  let message: string;
-  try {
-    const generated = cleanMessage(
-      await chatCompletion(messages, llmConfig),
-    );
-    if (!generated) {
-      progressBar.stop();
-      fail("AI 返回了空内容，请重试。");
-      return;
-    }
-    message = generated;
-  } catch (err) {
-    progressBar.stop("生成失败");
-    fail((err as Error).message);
-    return;
-  }
+  let message = await callLlmOrFail(
+    messages,
+    llmConfig,
+    progressBar,
+    "生成失败",
+    cleanMessage,
+  );
+  if (message === null) return;
   progressBar.stop();
 
   // 3. --print 或 --json：直接输出，不交互
   if (options.print || isJsonMode()) {
-    if (isJsonMode()) emitJson({ ok: true, message });
+    if (isJsonMode()) emitJson(withUsage({ ok: true, message }));
     else console.log(message);
     return;
   }
@@ -127,14 +121,16 @@ export async function runCommit(options: CommitOptions): Promise<void> {
     }
     if (action === "regenerate") {
       const regen = progress("重新生成...");
-      try {
-        message = cleanMessage(await chatCompletion(messages, llmConfig));
-      } catch (err) {
-        regen.stop("生成失败");
-        fail((err as Error).message);
-        return;
-      }
+      const regenerated = await callLlmOrFail(
+        messages,
+        llmConfig,
+        regen,
+        "生成失败",
+        cleanMessage,
+      );
+      if (regenerated === null) return;
       regen.stop();
+      message = regenerated;
       continue;
     }
     if (action === "edit") {

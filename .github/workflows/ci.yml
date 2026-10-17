@@ -20,8 +20,11 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm run test
+      # 用 coverage 而不是 test：同一次运行，外加阈值防回退（见 vitest.config.ts）
+      - run: npm run coverage
       - run: npm run build
         env:
           NODE_ENV: test
       - run: npm run docs:check
+      # dist 级冒烟：命令注册、退出码、参数接线只有真起进程才测得出来
+      - run: npm run e2e

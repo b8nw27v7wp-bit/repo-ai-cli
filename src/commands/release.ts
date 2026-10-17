@@ -109,12 +109,9 @@ export async function runRelease(options: ReleaseOptions): Promise<void> {
   }
 
   const next = level === suggestion.level ? suggestion.next : computeNext(current, level);
-  const files = await bumpPackageVersion(cwd, next);
-  if (!files.packageJson) {
-    fail("当前目录没有 package.json，无法 bump 版本");
-    return;
-  }
 
+  // tag 冲突必须在改版本号之前判：先 bump 再检查会让失败路径留下「版本号已改、tag 没打」
+  // 的半成品状态（与本仓库其他命令「失败不写半成品」的约定冲突）
   let tagName: string | null = null;
   if (options.tag) {
     tagName = `v${next}`;
@@ -122,6 +119,15 @@ export async function runRelease(options: ReleaseOptions): Promise<void> {
       fail(`tag 已存在: ${tagName}（先删除或换版本号）`);
       return;
     }
+  }
+
+  const files = await bumpPackageVersion(cwd, next);
+  if (!files.packageJson) {
+    fail("当前目录没有 package.json，无法 bump 版本");
+    return;
+  }
+
+  if (tagName) {
     try {
       await createTag(cwd, tagName, `release ${tagName}`);
     } catch (err) {

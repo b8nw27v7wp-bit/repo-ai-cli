@@ -49,7 +49,7 @@ export async function runSecrets(options: SecretsOptions): Promise<void> {
 
   const progressBar = progress("扫描敏感信息中...");
   const findings: SecretFinding[] = await scanSecrets(dir, {
-    maxFileBytes: (options.maxFileKb ?? 200) * 1024,
+    maxFileBytes: options.maxFileKb * 1024,
     severityThreshold: threshold,
   });
   progressBar.stop();

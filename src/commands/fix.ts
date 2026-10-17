@@ -1,8 +1,8 @@
 import { intro } from "@clack/prompts";
 import { collectMaterials } from "../lib/materials.js";
-import { chatCompletion, llmConfigFromOptions } from "../lib/llm.js";
+import { llmConfigFromOptions } from "../lib/llm.js";
+import { callLlmOrFail } from "../lib/llm-step.js";
 import { buildFixPrompt } from "../prompts/fix.js";
-import { loadConfig } from "../lib/config.js";
 import {
   interactive,
   setJsonMode,
@@ -12,6 +12,7 @@ import {
   fail,
   progress,
 } from "../lib/ui.js";
+import { withUsage } from "../lib/usage.js";
 import type { FixOptions } from "../types.js";
 
 /** 材料里被排除的疑似密钥文件上报（这些文件不会发给 LLM，静默丢弃会让用户困惑） */
@@ -26,7 +27,8 @@ function reportSkippedSecrets(skipped: string[]): void {
  */
 export async function runFix(options: FixOptions): Promise<void> {
   setJsonMode(options.json === true);
-  const cfg = await loadConfig(options.profile);
+  // 配置已由 CLI 层解析（CLI 参数 > 配置 > 内置默认），命令层不再读配置文件
+  const cfg = options.resolvedConfig ?? {};
   if (interactive && !isJsonMode()) intro("repo-ai fix");
 
   const p = progress("收集项目材料...");
@@ -34,8 +36,8 @@ export async function runFix(options: FixOptions): Promise<void> {
   try {
     materials = await collectMaterials({
       rootDir: process.cwd(),
-      maxTokens: options.maxTokens ?? 48000,
-      maxFileKb: options.maxFileKb ?? 100,
+      maxTokens: options.maxTokens,
+      maxFileKb: options.maxFileKb,
     });
   } catch (err) {
     p.stop();
@@ -51,23 +53,19 @@ export async function runFix(options: FixOptions): Promise<void> {
     options.description,
   );
 
-  let result: string;
-  try {
-    result = await chatCompletion(messages, llmConfigFromOptions(options, cfg));
-    p.stop();
-  } catch (err) {
-    p.stop("分析失败");
-    fail((err as Error).message);
-    return;
-  }
+  const result = await callLlmOrFail(
+    messages,
+    llmConfigFromOptions(options, cfg),
+    p,
+    "分析失败",
+    (r) => r.trim(),
+  );
+  if (result === null) return;
+  p.stop();
 
-  if (!result.trim()) {
-    fail("AI 返回了空内容，请重试。");
-    return;
-  }
   if (isJsonMode()) {
-    emitJson({ ok: true, result: result.trim() });
+    emitJson(withUsage({ ok: true, result }));
     return;
   }
-  console.log(result.trim());
+  console.log(result);
 }

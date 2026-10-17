@@ -66,6 +66,7 @@ describe("runReviewPr", () => {
       target: "https://github.com/o/r/pull/9",
       provider: "deepseek",
       apiKey: ["sk", "unit"].join("-"),
+      maxDiffKb: 200,
       json: false,
     });
 
@@ -95,6 +96,7 @@ describe("runReviewPr", () => {
       target: "o/r#9",
       provider: "deepseek",
       apiKey: ["sk", "unit"].join("-"),
+      maxDiffKb: 200,
       json: true,
     });
     const stdout = log.mock.calls.map((c) => String(c[0])).join("\n");
@@ -121,7 +123,7 @@ describe("runReviewPr", () => {
     const fetchSpy = vi.fn(async () => new Response("{}", { status: 200 }));
     vi.stubGlobal("fetch", fetchSpy);
     vi.spyOn(console, "error").mockImplementation(() => {});
-    await runReviewPr({ target: "totally-not-a-pr", provider: "deepseek", apiKey: "sk-unit" });
+    await runReviewPr({ target: "totally-not-a-pr", provider: "deepseek", apiKey: "sk-unit", maxDiffKb: 200 });
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
@@ -130,7 +132,7 @@ describe("runReviewPr", () => {
     stubPrFetch({ metaStatus: 404 });
     const chat = vi.spyOn(await import("../src/lib/llm.js"), "chatCompletion");
     vi.spyOn(console, "error").mockImplementation(() => {});
-    await runReviewPr({ target: "o/r#404", provider: "deepseek", apiKey: "sk-unit" });
+    await runReviewPr({ target: "o/r#404", provider: "deepseek", apiKey: "sk-unit", maxDiffKb: 200 });
     expect(chat).not.toHaveBeenCalled();
   });
 
@@ -144,6 +146,7 @@ describe("runReviewPr", () => {
       focus: "nonsense",
       provider: "deepseek",
       apiKey: "sk-unit",
+      maxDiffKb: 200,
     });
     expect(chat).not.toHaveBeenCalled();
   });
@@ -163,6 +166,7 @@ describe("runReviewPr", () => {
       target: "o/r#9",
       provider: "deepseek",
       apiKey: "sk-unit",
+      maxDiffKb: 200,
       output: out,
     });
     const written = await readFile(out, "utf8");

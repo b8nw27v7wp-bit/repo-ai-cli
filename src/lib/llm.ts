@@ -1,6 +1,55 @@
-import type { ChatMessage, LLMConfig } from "../types.js";
+import type { ChatMessage, LLMConfig, TokenUsage } from "../types.js";
 import { resolveLLMConfig, type ResolveInput } from "./providers.js";
 import { debug } from "./log.js";
+import { formatUsageLine, recordUsage } from "./usage.js";
+import { say } from "./ui.js";
+
+/** 原始响应里的 usage 字段（各 provider 命名基本一致，少数用 input/output_tokens） */
+interface RawUsage {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+  input_tokens?: number;
+  output_tokens?: number;
+}
+
+/**
+ * 归一化 usage。全都没有可识别字段时返回 null（而不是 {}）——
+ * 调用方要能区分「没有用量」与「用量是零」。
+ */
+function normalizeUsage(raw: RawUsage | null | undefined): TokenUsage | null {
+  if (!raw || typeof raw !== "object") return null;
+  const promptTokens = raw.prompt_tokens ?? raw.input_tokens;
+  const completionTokens = raw.completion_tokens ?? raw.output_tokens;
+  const totalTokens =
+    raw.total_tokens ??
+    (promptTokens !== undefined && completionTokens !== undefined
+      ? promptTokens + completionTokens
+      : undefined);
+  if (
+    promptTokens === undefined &&
+    completionTokens === undefined &&
+    totalTokens === undefined
+  ) {
+    return null;
+  }
+  return { promptTokens, completionTokens, totalTokens };
+}
+
+/**
+ * 记一笔用量并（非 JSON 模式下）向 stderr 打一行汇总。
+ *
+ * 打在这里而不是各命令里：12 条 AI 命令都走 chatCompletion / streamChatCompletion，
+ * 放在出口处一处覆盖全部，也不会漏掉「调用成功但后续落盘失败」这类路径——
+ * 那种情况下用户同样已经付过费了。
+ */
+function trackUsage(raw: RawUsage | null | undefined): void {
+  const usage = normalizeUsage(raw);
+  recordUsage(usage);
+  const line = formatUsageLine();
+  // say() 在 --json 模式下静默（用量改由输出对象的 usage 字段承载），其余走 stderr
+  if (line) say(line);
+}
 
 export class LLMError extends Error {
   constructor(
@@ -136,6 +185,7 @@ export async function chatCompletion(
     const data = (await res.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
       error?: { message?: string };
+      usage?: RawUsage;
     };
     if (data.error?.message) {
       throw new LLMError(`API 返回错误: ${data.error.message}`, "http-error");
@@ -146,6 +196,7 @@ export async function chatCompletion(
       lastError = new LLMError("API 返回空响应", "empty-response");
       continue;
     }
+    trackUsage(data.usage);
     return content;
   }
 
@@ -212,6 +263,10 @@ export async function streamChatCompletion(
   const decoder = new TextDecoder();
   let full = "";
   let buffer = "";
+  // SSE 的 usage 只在末帧出现，且多数 provider 要显式请求 stream_options.include_usage
+  // 才返回。这里只做「有就收下」，不去加那个参数——13 家里只要有一家拒绝未知字段，
+  // 整个流式就废了，代价远大于拿不到用量。
+  let streamUsage: RawUsage | null = null;
 
   try {
     while (true) {
@@ -227,12 +282,16 @@ export async function streamChatCompletion(
         const payload = line.slice(5).trim();
         if (!payload || payload === "[DONE]") continue;
 
-        let json: { choices?: Array<{ delta?: { content?: string } }> };
+        let json: {
+          choices?: Array<{ delta?: { content?: string } }>;
+          usage?: RawUsage;
+        };
         try {
           json = JSON.parse(payload);
         } catch {
           continue;
         }
+        if (json.usage) streamUsage = json.usage;
         const delta = json.choices?.[0]?.delta?.content;
         if (typeof delta === "string" && delta.length > 0) {
           full += delta;
@@ -252,6 +311,7 @@ export async function streamChatCompletion(
   if (!full.trim()) {
     throw new LLMError("API 返回空响应", "empty-response");
   }
+  trackUsage(streamUsage);
   return full;
 }
 

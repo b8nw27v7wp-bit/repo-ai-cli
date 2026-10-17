@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
-import { InvalidArgumentError } from "commander";
-import { fail } from "./ui.js";
+import { Command, InvalidArgumentError, Option } from "commander";
+import { fail, warn } from "./ui.js";
 
 /**
  * CLI 参数解析与校验（各命令共用）。
@@ -51,6 +51,66 @@ export function dateOption(): (v: string) => string {
     }
     return v;
   };
+}
+
+/**
+ * 已废弃的参数名 → 现用名（camelCase，与 commander 的 opts() 键一致）。
+ *
+ * v0.8 统一了「给 LLM 的材料预算」这套命名：同一类语义此前有四种写法
+ * （--max-tokens / --max / --max-diff-kb / --max-file-kb），换一条命令含义就变。
+ * 只改语义最含混的两个；--max-diff-kb 与 --max-file-kb 本身就表意清楚，保持不动。
+ *
+ * 旧名保留为隐藏别名（--help 不显示），命中时打一行警告，计划在下个 major 移除。
+ */
+export const DEPRECATED_ALIASES: Record<string, string> = {
+  maxTokens: "budgetTokens",
+  max: "maxCommits",
+};
+
+/** camelCase → kebab-case（用于拼出参数名给用户看） */
+function toKebab(key: string): string {
+  return key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+}
+
+/**
+ * 构造隐藏的废弃别名选项：接受旧名但不进 --help，避免新用户学到已废弃的写法。
+ * @param flags 旧参数写法，如 "--max-tokens <n>"
+ * @param replacement 现用参数名（kebab），如 "budget-tokens"
+ */
+export function deprecatedOption(
+  flags: string,
+  replacement: string,
+  parser: (v: string) => number,
+): Option {
+  return new Option(flags, `[已废弃] 请改用 --${replacement}`)
+    .argParser(parser)
+    .hideHelp();
+}
+
+/**
+ * 把废弃参数的值搬到现用参数上，并打一行 deprecation 警告。
+ *
+ * 挂在 program 的 preAction 钩子里，让 4 条命令共用同一套迁移逻辑，而不是各写一遍。
+ *
+ * 警告刻意走 stderr 且不因 --json 静默：preAction 早于命令内的 setJsonMode，
+ * 此时 jsonMode 还是 false，所以 JSON 模式下也会打印——这是想要的，
+ * stdout 仍然只有产物，而需要迁移的 CI 用户不该被蒙在鼓里。
+ */
+export function applyDeprecatedAliases(cmd: Command): void {
+  for (const [oldKey, newKey] of Object.entries(DEPRECATED_ALIASES)) {
+    if (cmd.getOptionValueSource(oldKey) !== "cli") continue;
+    warn(
+      `--${toKebab(oldKey)} 已废弃，请改用 --${toKebab(newKey)}（旧名将在下个 major 版本移除）`,
+    );
+    // 新旧同时显式给出时以新名为准，不覆盖用户明确写的那个
+    if (cmd.getOptionValueSource(newKey) !== "cli") {
+      // 必须用 setOptionValueWithSource 而不是 setOptionValue：后者把来源记成
+      // undefined，而 cli/shared.ts 的 resolveNumber 只在来源为 "cli" 时才认 CLI 值——
+      // 用错就会让 `--max-tokens 5000` 配上 `config set maxTokens 8000` 静默用 8000，
+      // 把用户显式传的值悄悄丢掉
+      cmd.setOptionValueWithSource(newKey, cmd.opts()[oldKey], "cli");
+    }
+  }
 }
 
 /** 命令内枚举校验；合法返回取值，非法 fail() 后返回 null */

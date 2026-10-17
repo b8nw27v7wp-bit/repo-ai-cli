@@ -68,11 +68,11 @@ export const CONFIG_KEYS: Array<{
   { key: "baseUrl", label: "自定义 API 端点", type: "string" },
   { key: "model", label: "模型名", type: "string" },
   { key: "apiKey", label: "API key", type: "string" },
-  { key: "maxTokens", label: "readme 默认 token 预算", type: "number" },
+  { key: "maxTokens", label: "材料 token 预算默认值（readme/ask/fix）", type: "number" },
   { key: "maxOutputTokens", label: "LLM 最大输出 token", type: "number" },
   { key: "temperature", label: "采样温度 (0~2)", type: "number" },
-  { key: "maxFileKb", label: "readme 单文件上限 KB", type: "number" },
-  { key: "maxDiffKb", label: "commit diff 上限 KB", type: "number" },
+  { key: "maxFileKb", label: "单文件上限 KB（readme/explain/translate/test/refactor/ask/fix/secrets 共用）", type: "number" },
+  { key: "maxDiffKb", label: "diff 上限 KB（commit/review/review-pr/pr 共用）", type: "number" },
 ];
 
 const PROFILE_FIELDS = new Set(CONFIG_KEYS.map((c) => c.key as string));

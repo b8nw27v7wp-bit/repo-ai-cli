@@ -10,9 +10,9 @@ import {
   getBranchDiff,
   getCurrentBranch,
 } from "../lib/git.js";
-import { chatCompletion, llmConfigFromOptions } from "../lib/llm.js";
+import { llmConfigFromOptions } from "../lib/llm.js";
+import { callLlmOrFail } from "../lib/llm-step.js";
 import { buildPrPrompt, parsePrResult } from "../prompts/pr.js";
-import { loadConfig } from "../lib/config.js";
 import {
   interactive,
   setJsonMode,
@@ -23,6 +23,7 @@ import {
   fail,
   progress,
 } from "../lib/ui.js";
+import { withUsage } from "../lib/usage.js";
 import type { PrOptions } from "../types.js";
 
 const execFileAsync = promisify(execFile);
@@ -59,7 +60,8 @@ async function createGithubPr(
  */
 export async function runPr(options: PrOptions): Promise<void> {
   setJsonMode(options.json === true);
-  const cfg = await loadConfig(options.profile);
+  // 配置已由 CLI 层解析（CLI 参数 > 配置 > 内置默认），命令层不再读配置文件
+  const cfg = options.resolvedConfig ?? {};
   if (interactive && !isJsonMode()) intro("repo-ai pr");
 
   const cwd = process.cwd();
@@ -86,7 +88,7 @@ export async function runPr(options: PrOptions): Promise<void> {
   try {
     diffResult = await getBranchDiff(cwd, {
       base,
-      maxBytes: (options.maxDiffKb ?? 200) * 1024,
+      maxBytes: options.maxDiffKb * 1024,
     });
   } catch (err) {
     fail((err as Error).message);
@@ -114,19 +116,20 @@ export async function runPr(options: PrOptions): Promise<void> {
     files: diffResult.files,
   });
 
-  let result;
-  try {
-    const raw = await chatCompletion(messages, llmConfigFromOptions(options, cfg));
-    result = parsePrResult(raw);
-  } catch (err) {
-    progressBar.stop("生成失败");
-    fail((err as Error).message);
-    return;
-  }
+  const raw = await callLlmOrFail(
+    messages,
+    llmConfigFromOptions(options, cfg),
+    progressBar,
+    "生成失败",
+  );
+  if (raw === null) return;
   progressBar.stop();
 
+  const result = parsePrResult(raw);
   if (!result.title) {
-    fail("AI 返回了空内容，请重试。");
+    // 与 llm-step 的「空响应」不是一回事：内容有，只是没解析出标题——
+    // 提示要指向格式，否则用户会以为模型什么都没返回
+    fail("未能从 AI 输出中解析出 PR 标题（期望首行为 `feat: ...` 形式的标题）。");
     return;
   }
 
@@ -152,14 +155,16 @@ export async function runPr(options: PrOptions): Promise<void> {
 
   // 5. 输出
   if (isJsonMode()) {
-    emitJson({
-      ok: true,
-      base,
-      branch: branch ?? null,
-      title: result.title,
-      body: result.body,
-      files: diffResult.files,
-    });
+    emitJson(
+      withUsage({
+        ok: true,
+        base,
+        branch: branch ?? null,
+        title: result.title,
+        body: result.body,
+        files: diffResult.files,
+      }),
+    );
     return;
   }
   console.log(result.title + "\n");

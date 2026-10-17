@@ -4,13 +4,13 @@ import { intro } from "@clack/prompts";
 import { collectFiles } from "../lib/collect-files.js";
 import { buildFileTree } from "../lib/file-tree.js";
 import { allocateBudget, estimateTokens } from "../lib/token-budget.js";
-import { chatCompletion, streamChatCompletion, llmConfigFromOptions } from "../lib/llm.js";
+import { llmConfigFromOptions } from "../lib/llm.js";
+import { callLlmOrFail, streamLlmOrFail } from "../lib/llm-step.js";
 import { buildReadmePrompt } from "../prompts/readme.js";
 import { parseEnum } from "../lib/options.js";
 import { writeOutput } from "../lib/output.js";
 import { validateReadmeStructure } from "../lib/readme-validate.js";
 import { parseGithubRef, cloneRepo } from "../lib/github.js";
-import { loadConfig } from "../lib/config.js";
 import {
   interactive,
   setJsonMode,
@@ -22,6 +22,7 @@ import {
   fail,
   progress,
 } from "../lib/ui.js";
+import { withUsage } from "../lib/usage.js";
 import type { ReadmeOptions } from "../types.js";
 
 const isUrlLike = (s: string) =>
@@ -44,7 +45,8 @@ export async function runReadme(options: ReadmeOptions): Promise<void> {
   setJsonMode(options.json === true);
   if (interactive && !isJsonMode()) intro("repo-ai readme");
 
-  const cfg = await loadConfig(options.profile);
+  // 配置已由 CLI 层解析（CLI 参数 > 配置 > 内置默认），命令层不再读配置文件
+  const cfg = options.resolvedConfig ?? {};
 
   const target = options.target || ".";
   const progressBar = progress("准备中...");
@@ -166,28 +168,15 @@ export async function runReadme(options: ReadmeOptions): Promise<void> {
     const messages = buildReadmePrompt(repoName, budget, language);
     const llmConfig = llmConfigFromOptions(options, cfg);
     const stream = options.stream === true && interactive && !isJsonMode();
-    let content: string;
-    try {
-      if (stream) {
-        progressBar.stop("流式生成开始");
-        content = await streamChatCompletion(messages, llmConfig, (t) =>
-          process.stdout.write(t),
-        );
-        process.stdout.write("\n");
-      } else {
-        content = await chatCompletion(messages, llmConfig);
-        progressBar.stop("生成完成");
-      }
-    } catch (err) {
-      progressBar.stop("生成失败");
-      fail((err as Error).message);
-      return;
+    let content: string | null;
+    if (stream) {
+      progressBar.stop("流式生成开始");
+      content = await streamLlmOrFail(messages, llmConfig, progressBar, "生成失败");
+    } else {
+      content = await callLlmOrFail(messages, llmConfig, progressBar, "生成失败");
     }
-
-    if (!content.trim()) {
-      fail("AI 返回了空内容，未写入文件。请重试。");
-      return;
-    }
+    if (content === null) return;
+    progressBar.stop("生成完成");
 
     // 5. 落盘前结构校验：不合格直接报错，绝不写出半成品
     const validation = validateReadmeStructure(content);
@@ -203,7 +192,7 @@ export async function runReadme(options: ReadmeOptions): Promise<void> {
     const outputPath = options.output ?? "README.md";
     const abs = await writeOutput(content, outputPath);
     if (isJsonMode()) {
-      emitJson({ ok: true, output: abs, bytes: Buffer.byteLength(content) });
+      emitJson(withUsage({ ok: true, output: abs, bytes: Buffer.byteLength(content) }));
       return;
     }
     done(`README 已写入: ${abs}`);

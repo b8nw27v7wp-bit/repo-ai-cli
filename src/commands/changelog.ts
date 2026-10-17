@@ -3,10 +3,10 @@ import path from "node:path";
 import { intro } from "@clack/prompts";
 import { getLog, getLatestTag, type CommitEntry } from "../lib/git.js";
 import { renderCompactChangelog } from "../lib/changelog-compact.js";
-import { chatCompletion, streamChatCompletion, llmConfigFromOptions } from "../lib/llm.js";
+import { llmConfigFromOptions } from "../lib/llm.js";
+import { callLlmOrFail, streamLlmOrFail } from "../lib/llm-step.js";
 import { buildChangelogPrompt } from "../prompts/changelog.js";
 import { writeOutput } from "../lib/output.js";
-import { loadConfig } from "../lib/config.js";
 import { parseEnum } from "../lib/options.js";
 import {
   interactive,
@@ -18,6 +18,7 @@ import {
   fail,
   progress,
 } from "../lib/ui.js";
+import { withUsage } from "../lib/usage.js";
 import type { ChangelogOptions } from "../types.js";
 
 /** 取最近一个 tag 作为默认区间起点（无 tag 则回退最近 N 条） */
@@ -34,7 +35,8 @@ async function defaultRange(cwd: string): Promise<{ range?: string; label: strin
  */
 export async function runChangelog(options: ChangelogOptions): Promise<void> {
   setJsonMode(options.json === true);
-  const cfg = await loadConfig(options.profile);
+  // 配置已由 CLI 层解析（CLI 参数 > 配置 > 内置默认），命令层不再读配置文件
+  const cfg = options.resolvedConfig ?? {};
   if (interactive && !isJsonMode()) intro("repo-ai changelog");
 
   const language = parseEnum(options.language, ["zh", "en"] as const, "language", "zh");
@@ -146,40 +148,27 @@ export async function runChangelog(options: ChangelogOptions): Promise<void> {
     existingHeader,
   });
 
-  let content: string;
   const llmConfig = llmConfigFromOptions(options, cfg);
   const stream = options.stream === true && interactive && !isJsonMode() && !options.print;
-  try {
-    if (stream) {
-      progressBar.stop("流式生成开始");
-      content = await streamChatCompletion(messages, llmConfig, (t) =>
-        process.stdout.write(t),
-      );
-      process.stdout.write("\n");
-    } else {
-      content = await chatCompletion(messages, llmConfig);
-      progressBar.stop("生成完成");
-    }
-  } catch (err) {
-    progressBar.stop("生成失败");
-    fail((err as Error).message);
-    return;
+  let content: string | null;
+  if (stream) {
+    progressBar.stop("流式生成开始");
+    content = await streamLlmOrFail(messages, llmConfig, progressBar, "生成失败");
+  } else {
+    content = await callLlmOrFail(messages, llmConfig, progressBar, "生成失败");
   }
-
-  if (!content.trim()) {
-    fail("AI 返回了空内容，未写入文件。请重试。");
-    return;
-  }
+  if (content === null) return;
+  progressBar.stop("生成完成");
 
   // 写文件（或 --print 输出）
   if (options.print) {
-    if (isJsonMode()) emitJson({ ok: true, content: content.trim() });
+    if (isJsonMode()) emitJson(withUsage({ ok: true, content: content.trim() }));
     else console.log(content.trim());
     return;
   }
   const abs = await writeOutput(content.trim() + "\n", existingPath);
   if (isJsonMode()) {
-    emitJson({ ok: true, output: abs, bytes: Buffer.byteLength(content) });
+    emitJson(withUsage({ ok: true, output: abs, bytes: Buffer.byteLength(content) }));
     return;
   }
   done(`CHANGELOG 已写入: ${abs}`);

@@ -26,7 +26,7 @@ describe("runSecrets --json", () => {
     vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => {
       out.push(a.map(String).join(" "));
     });
-    await runSecrets({ target: tmp, json: true });
+    await runSecrets({ target: tmp, maxFileKb: 200, json: true });
     expect(process.exitCode).toBe(1);
     expect(out).toHaveLength(1);
     const body = JSON.parse(out[0]!) as { ok: boolean; count: number };

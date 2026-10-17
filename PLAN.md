@@ -386,8 +386,8 @@ jobs:
 ## 10. 简历条目（预写）
 
 > **repo-ai-cli** — TypeScript CLI 工具（npm 发布，GitHub Actions 自动 CI/CD）
-> 24 条命令覆盖仓库助手全场景：AI 生成双语 README / 规范 commit / CHANGELOG / 代码审查 / 解释 / PR 描述 / 文档翻译 / 单元测试 / 重构建议 / bug 定位 / 代码库问答（RAG） / README 徽章 / 贡献指南，以及离线的密钥扫描 / 环境体检 / .gitignore / LICENSE / 仓库统计 / 依赖解析（--outdated / --audit）/ 项目脚手架 / git 钩子 / 语义化版本发布；实现 token 预算控制、.gitignore 感知文件收集、LLM 重试与流式输出、GitHub 仓库浅克隆（含镜像回退）、多 profile 配置切换、--verbose 调试日志；支持 13 家国内外 LLM 提供商（DeepSeek/OpenAI/Kimi/GLM/通义/MiniMax/Grok/硅基流动/Ollama 本地/OpenRouter/Groq/火山方舟/Gemini）及任意 OpenAI 兼容端点；BYOK 零服务端成本；296 单测覆盖核心逻辑。
+> 24 条命令覆盖仓库助手全场景：AI 生成双语 README / 规范 commit / CHANGELOG / 代码审查 / 线上 PR 审查（可回写评论） / 解释 / PR 描述 / 文档翻译 / 单元测试 / 重构建议 / bug 定位 / 代码库问答（RAG） / README 徽章 / 贡献指南，以及离线的密钥扫描 / 环境体检 / .gitignore / LICENSE / 仓库统计 / 依赖解析（--outdated / --audit）/ 项目脚手架 / git 钩子 / 语义化版本发布；实现 token 预算控制、.gitignore 感知文件收集、敏感文件与明文密钥过滤、LLM 重试与流式输出、token 用量可观测、GitHub 仓库浅克隆（含镜像回退）、多 profile 配置切换、--verbose 调试日志；支持 13 家国内外 LLM 提供商（DeepSeek/OpenAI/Kimi/GLM/通义/MiniMax/Grok/硅基流动/Ollama 本地/OpenRouter/Groq/火山方舟/Gemini）及任意 OpenAI 兼容端点；BYOK 零服务端成本；436 单测 + 19 项 dist 级端到端冒烟覆盖核心逻辑与命令接线。
 
 ---
 
-*计划版本：v1.0 · 2026-07-31 · M1-M15 已全部完成（v0.7.0，24 条命令 / 13 家 provider / 296 测试）；本文件已按当前实现回写口径，后续变更需同步更新*
+*计划版本：v1.0 · 2026-07-31 · M1-M15 已全部完成（24 条命令 / 13 家 provider）；v0.8 完善计划（命令层测试补全、参数命名统一、index.ts 拆分、e2e 基线、token 用量可观测、review-pr 回写评论）已落地，详见 `docs/完善计划-v0.8.md`。当前口径：436 单测 + 19 项 dist 级 e2e 冒烟；本文件后续变更需同步更新*

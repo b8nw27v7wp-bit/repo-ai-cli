@@ -1,3 +1,5 @@
+import type { EffectiveConfig } from "./lib/config.js";
+
 /** 文件收集优先级：1 最高（反映项目定位），3 最低（采样） */
 export type Priority = 1 | 2 | 3;
 
@@ -40,52 +42,63 @@ export interface BudgetResult {
   skippedNote?: string;
 }
 
-export interface ReadmeOptions {
+/**
+ * 12 条 AI 命令共有的选项。
+ *
+ * 这 8 个字段此前在 12 个接口里逐字重复（96 处），加一个 LLM 参数要改 12 个接口。
+ * 抽出来之后，「加参数」只需改这里 + cli/shared.ts 的 withLLMOptions 一处。
+ *
+ * 注意 `maxOutputTokens` / `temperature` 仍是可选的：llm.ts 里有最后的兜底
+ * （4096 / 0.7），而各命令的内置默认值由 cli/register-ai.ts 的 commander 默认值提供。
+ */
+export interface AiCommandBase {
+  /** LLM 提供商 id（deepseek 等），见 lib/providers.ts */
+  provider?: string;
+  baseUrl?: string;
+  model?: string;
+  apiKey?: string;
+  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
+  profile?: string;
+  /** 最大输出 token 数 */
+  maxOutputTokens?: number;
+  /** 采样温度 0~2 */
+  temperature?: number;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+  /**
+   * CLI 层已解析好的持久化配置（顶层字段 ← 激活 profile 覆盖）。
+   *
+   * 命令层不再自己读 `~/.repo-ai/config.json`：配置解析只在 cli/register-ai.ts
+   * 一处发生，命令层收到的是「CLI 参数 > 配置 > 内置默认」三层规则解析后的结果。
+   * 直接调用 runX 时可以不传，此时 provider 解析回退到环境变量。
+   */
+  resolvedConfig?: EffectiveConfig;
+}
+
+export interface ReadmeOptions extends AiCommandBase {
   /** 目标路径或目录，默认 "." */
   target: string;
   output?: string;
   language: "bilingual" | "zh" | "en";
   dryRun?: boolean;
+  /** 材料 token 预算（CLI > 配置 maxTokens > 内置默认） */
   maxTokens: number;
+  /** 单文件上限 KB（CLI > 配置 maxFileKb > 内置默认） */
   maxFileKb: number;
-  /** LLM 提供商 id（deepseek 等），见 providers.ts */
-  provider?: string;
-  baseUrl?: string;
-  model?: string;
-  apiKey?: string;
-  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
-  profile?: string;
-  /** 最大输出 token 数 */
-  maxOutputTokens?: number;
-  /** 采样温度 */
-  temperature?: number;
-  /** JSON 输出（脚本友好） */
-  json?: boolean;
   /** 流式输出（TTY 下边生成边打印） */
   stream?: boolean;
 }
 
-export interface CommitOptions {
+export interface CommitOptions extends AiCommandBase {
   staged?: boolean;
   all?: boolean;
   print?: boolean;
   type?: string;
-  maxDiffKb?: number;
-  provider?: string;
-  baseUrl?: string;
-  model?: string;
-  apiKey?: string;
-  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
-  profile?: string;
-  /** 最大输出 token 数 */
-  maxOutputTokens?: number;
-  /** 采样温度 */
-  temperature?: number;
-  /** JSON 输出（脚本友好） */
-  json?: boolean;
+  /** diff 截断上限 KB（CLI > 配置 maxDiffKb > 内置默认） */
+  maxDiffKb: number;
 }
 
-export interface ReviewOptions {
+export interface ReviewOptions extends AiCommandBase {
   /** 使用暂存区改动（默认 staged） */
   staged?: boolean;
   /** 包含未暂存改动 */
@@ -94,56 +107,26 @@ export interface ReviewOptions {
   focus?: string;
   /** 输出文件（默认打印到 stdout） */
   output?: string;
-  /** diff 截断上限（KB） */
-  maxDiffKb?: number;
-  provider?: string;
-  baseUrl?: string;
-  model?: string;
-  apiKey?: string;
-  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
-  profile?: string;
-  maxOutputTokens?: number;
-  temperature?: number;
-  /** JSON 输出（脚本友好） */
-  json?: boolean;
+  /** diff 截断上限 KB（CLI > 配置 maxDiffKb > 内置默认） */
+  maxDiffKb: number;
 }
 
-export interface ExplainOptions {
+export interface ExplainOptions extends AiCommandBase {
   /** 文件路径，可带 :行号 或 :起-止（如 src/lib/git.ts:38） */
   target: string;
   /** 输出语言：zh | en | bilingual */
   language: "zh" | "en" | "bilingual";
-  /** 单文件读取上限（KB） */
-  maxFileKb?: number;
-  provider?: string;
-  baseUrl?: string;
-  model?: string;
-  apiKey?: string;
-  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
-  profile?: string;
-  maxOutputTokens?: number;
-  temperature?: number;
-  /** JSON 输出（脚本友好） */
-  json?: boolean;
+  /** 单文件读取上限 KB（CLI > 配置 maxFileKb > 内置默认） */
+  maxFileKb: number;
 }
 
-export interface PrOptions {
+export interface PrOptions extends AiCommandBase {
   /** base 分支（默认自动检测 origin/HEAD → main → master） */
   base?: string;
-  /** diff 截断上限（KB） */
-  maxDiffKb?: number;
+  /** diff 截断上限 KB（CLI > 配置 maxDiffKb > 内置默认） */
+  maxDiffKb: number;
   /** 生成后用 gh pr create 直接创建 PR（非 JSON 模式） */
   create?: boolean;
-  provider?: string;
-  baseUrl?: string;
-  model?: string;
-  apiKey?: string;
-  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
-  profile?: string;
-  maxOutputTokens?: number;
-  temperature?: number;
-  /** JSON 输出（脚本友好） */
-  json?: boolean;
 }
 
 export interface InitOptions {
@@ -162,8 +145,8 @@ export interface SecretsOptions {
   target?: string;
   /** 只报告 >= 此级别：critical | high | medium */
   severity?: string;
-  /** 单文件扫描上限（KB） */
-  maxFileKb?: number;
+  /** 单文件扫描上限 KB（CLI > 配置 maxFileKb > 内置默认） */
+  maxFileKb: number;
   /** JSON 输出（脚本友好） */
   json?: boolean;
 }
@@ -173,25 +156,19 @@ export interface DoctorOptions {
   json?: boolean;
 }
 
-export interface ReviewPrOptions {
+export interface ReviewPrOptions extends AiCommandBase {
   /** PR 引用：https://github.com/owner/repo/pull/123、owner/repo#123、owner/repo/pull/123 */
   target: string;
   /** 审查维度：all | bugs | security | style | perf（默认 all） */
   focus?: string;
   /** 输出文件（默认打印到 stdout） */
   output?: string;
-  /** diff 截断上限（KB） */
-  maxDiffKb?: number;
-  provider?: string;
-  baseUrl?: string;
-  model?: string;
-  apiKey?: string;
-  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
-  profile?: string;
-  maxOutputTokens?: number;
-  temperature?: number;
-  /** JSON 输出（脚本友好） */
-  json?: boolean;
+  /** diff 截断上限 KB（CLI > 配置 maxDiffKb > 内置默认） */
+  maxDiffKb: number;
+  /** 把审查结论作为 PR 评论发布（默认只预览，需配合 yes 才真发） */
+  comment?: boolean;
+  /** 确认发布评论；非交互模式下这是唯一的授权方式 */
+  yes?: boolean;
 }
 
 export interface GitignoreOptions {
@@ -254,67 +231,37 @@ export interface ContributingOptions {
   json?: boolean;
 }
 
-export interface TranslateOptions {
+export interface TranslateOptions extends AiCommandBase {
   /** 输入文件路径 */
   file: string;
   /** 目标语言：zh | en | bilingual */
   to?: string;
   /** 输出文件（默认 stdout） */
   output?: string;
-  /** 单文件读取上限（KB） */
-  maxFileKb?: number;
-  provider?: string;
-  baseUrl?: string;
-  model?: string;
-  apiKey?: string;
-  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
-  profile?: string;
-  maxOutputTokens?: number;
-  temperature?: number;
-  /** JSON 输出（脚本友好） */
-  json?: boolean;
+  /** 单文件读取上限 KB（CLI > 配置 maxFileKb > 内置默认） */
+  maxFileKb: number;
 }
 
-export interface TestOptions {
+export interface TestOptions extends AiCommandBase {
   /** 输入文件路径 */
   file: string;
   /** 测试框架：vitest | jest | node-test */
   framework?: string;
   /** 输出文件（默认 stdout） */
   output?: string;
-  /** 单文件读取上限（KB） */
-  maxFileKb?: number;
-  provider?: string;
-  baseUrl?: string;
-  model?: string;
-  apiKey?: string;
-  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
-  profile?: string;
-  maxOutputTokens?: number;
-  temperature?: number;
-  /** JSON 输出（脚本友好） */
-  json?: boolean;
+  /** 单文件读取上限 KB（CLI > 配置 maxFileKb > 内置默认） */
+  maxFileKb: number;
 }
 
-export interface RefactorOptions {
+export interface RefactorOptions extends AiCommandBase {
   /** 输入文件路径 */
   file: string;
   /** 聚焦维度：all | readability | perf | complexity | types */
   focus?: string;
   /** 输出文件（默认 stdout） */
   output?: string;
-  /** 单文件读取上限（KB） */
-  maxFileKb?: number;
-  provider?: string;
-  baseUrl?: string;
-  model?: string;
-  apiKey?: string;
-  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
-  profile?: string;
-  maxOutputTokens?: number;
-  temperature?: number;
-  /** JSON 输出（脚本友好） */
-  json?: boolean;
+  /** 单文件读取上限 KB（CLI > 配置 maxFileKb > 内置默认） */
+  maxFileKb: number;
 }
 
 export interface HooksOptions {
@@ -324,44 +271,24 @@ export interface HooksOptions {
   json?: boolean;
 }
 
-export interface AskOptions {
+export interface AskOptions extends AiCommandBase {
   /** 向代码库提出的问题 */
   question: string;
-  /** token 预算（用于材料收集） */
-  maxTokens?: number;
-  /** 单文件大小上限（KB） */
-  maxFileKb?: number;
-  provider?: string;
-  baseUrl?: string;
-  model?: string;
-  apiKey?: string;
-  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
-  profile?: string;
-  maxOutputTokens?: number;
-  temperature?: number;
+  /** 材料 token 预算（CLI > 配置 maxTokens > 内置默认） */
+  maxTokens: number;
+  /** 单文件上限 KB（CLI > 配置 maxFileKb > 内置默认） */
+  maxFileKb: number;
   /** 流式输出（TTY 下边生成边打印） */
   stream?: boolean;
-  /** JSON 输出（脚本友好） */
-  json?: boolean;
 }
 
-export interface FixOptions {
+export interface FixOptions extends AiCommandBase {
   /** bug 描述 */
   description: string;
-  /** token 预算（用于材料收集） */
-  maxTokens?: number;
-  /** 单文件大小上限（KB） */
-  maxFileKb?: number;
-  provider?: string;
-  baseUrl?: string;
-  model?: string;
-  apiKey?: string;
-  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
-  profile?: string;
-  maxOutputTokens?: number;
-  temperature?: number;
-  /** JSON 输出（脚本友好） */
-  json?: boolean;
+  /** 材料 token 预算（CLI > 配置 maxTokens > 内置默认） */
+  maxTokens: number;
+  /** 单文件上限 KB（CLI > 配置 maxFileKb > 内置默认） */
+  maxFileKb: number;
 }
 
 export interface ReleaseOptions {
@@ -373,7 +300,7 @@ export interface ReleaseOptions {
   json?: boolean;
 }
 
-export interface ChangelogOptions {
+export interface ChangelogOptions extends AiCommandBase {
   /** git 区间（v1.0.0.. / ..HEAD / 1.0.0..2.0.0）；默认最近一个 tag 之后 */
   range?: string;
   /** 最大 commit 数（默认 50） */
@@ -388,18 +315,8 @@ export interface ChangelogOptions {
   dryRun?: boolean;
   /** 只打印不写文件 */
   print?: boolean;
-  provider?: string;
-  baseUrl?: string;
-  model?: string;
-  apiKey?: string;
-  /** 使用指定 profile 的持久化配置（默认用 activeProfile/default） */
-  profile?: string;
-  maxOutputTokens?: number;
-  temperature?: number;
   /** 流式输出（TTY 下边生成边打印） */
   stream?: boolean;
-  /** JSON 输出（脚本友好） */
-  json?: boolean;
 }
 
 export interface LLMConfig {
@@ -426,4 +343,17 @@ export interface LLMConfig {
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
+}
+
+/**
+ * 单次 LLM 调用的 token 用量。
+ *
+ * 字段可缺：13 家 provider 对 usage 的支持并不一致，流式模式下多数要显式请求
+ * （stream_options.include_usage）才返回。缺就是缺，不用 0 顶替——
+ * 「未知」与「0」对按量付费的用户是两个完全不同的信息。
+ */
+export interface TokenUsage {
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
 }

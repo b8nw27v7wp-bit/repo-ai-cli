@@ -90,9 +90,87 @@ export function parseDiffFiles(diff: string): string[] {
   return files;
 }
 
-function apiUrl(ref: PrRef, kind: "meta" | "diff"): string {
+function apiUrl(ref: PrRef, kind: "meta" | "diff" | "reviews"): string {
   const base = `https://api.github.com/repos/${ref.owner}/${ref.repo}/pulls/${ref.number}`;
-  return kind === "meta" ? base : `${base}.diff`;
+  if (kind === "meta") return base;
+  return kind === "diff" ? `${base}.diff` : `${base}/reviews`;
+}
+
+/** 发布评论所需的写权限 token；缺失时给出可操作的获取指引 */
+export function requireGithubToken(): string {
+  const token = process.env.GITHUB_TOKEN?.trim();
+  if (!token) {
+    throw new Error(
+      "发布 PR 评论需要 GITHUB_TOKEN（读公开仓库不需要，写评论需要）。\n" +
+        "获取：https://github.com/settings/tokens —— 公开仓库勾 `public_repo`，私有仓库勾 `repo`\n" +
+        "设置：export GITHUB_TOKEN=ghp_xxx（Windows PowerShell: $env:GITHUB_TOKEN=\"ghp_xxx\"）",
+    );
+  }
+  return token;
+}
+
+/**
+ * 以 PR review（event=COMMENT）的形式发一条评论。
+ *
+ * 用 reviews 端点而不是 issues/comments：前者进 PR 的 review 时间线，
+ * 语义上就是「一次代码审查的结论」；行内评论（inline）需要把文件行号映射成
+ * diff position，模型给的行号一旦对不上就整条发不出去，代价不成比例。
+ *
+ * 返回评论的 html_url，便于调用方回报给用户。
+ */
+export async function postPullRequestReview(
+  ref: PrRef,
+  body: string,
+  timeoutMs = 30_000,
+): Promise<string> {
+  requireGithubToken(); // 只为在缺 token 时给出获取指引；apiHeaders 会自己读取它
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    debug(`发布 PR review: ${ref.owner}/${ref.repo}#${ref.number} (${body.length} 字符)`);
+    const res = await fetch(apiUrl(ref, "reviews"), {
+      method: "POST",
+      headers: apiHeaders("application/vnd.github+json"),
+      body: JSON.stringify({ body, event: "COMMENT" }),
+      signal: controller.signal,
+    });
+    if (res.status === 401 || res.status === 403) {
+      throw new Error(
+        `GITHUB_TOKEN 无权在该 PR 上评论（HTTP ${res.status}）。` +
+          "请确认 token 未过期、且对目标仓库有写权限（公开仓库需 public_repo，私有仓库需 repo）。",
+      );
+    }
+    if (res.status === 404) {
+      throw new Error(
+        `PR 不存在或无权访问: ${ref.owner}/${ref.repo}#${ref.number}`,
+      );
+    }
+    if (res.status === 422) {
+      throw new Error(
+        `GitHub 拒绝了这条评论（HTTP 422）：${await safeText(res)}`,
+      );
+    }
+    if (!res.ok) {
+      throw new Error(`发布评论失败: HTTP ${res.status} ${await safeText(res)}`);
+    }
+    const data = (await res.json()) as { html_url?: string };
+    return data.html_url ?? "";
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error(`发布评论超时（${timeoutMs / 1000}s）`, { cause: err });
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function safeText(res: Response): Promise<string> {
+  try {
+    return (await res.text()).slice(0, 300);
+  } catch {
+    return "<无法读取响应体>";
+  }
 }
 
 /**
