@@ -22,6 +22,12 @@ export interface LanguageStat {
   lines: number;
 }
 
+/** 由文件路径推断语言名（repo-index 与 stats 共用，避免两套映射漂移）。 */
+export function languageForPath(relPath: string): string {
+  const ext = path.extname(relPath).slice(1).toLowerCase();
+  return EXT_LANG[ext] ?? (ext ? ext.toUpperCase() : "other");
+}
+
 export interface RepoStats {
   files: number;
   lines: number;
@@ -69,7 +75,7 @@ export async function getRepoStats(
   for (const rel of relPaths) {
     const ext = path.extname(rel).slice(1).toLowerCase();
     if (BINARY_EXTS.has(ext)) continue;
-    const language = EXT_LANG[ext] ?? (ext ? ext.toUpperCase() : "other");
+    const language = languageForPath(rel);
 
     let content: string;
     try {

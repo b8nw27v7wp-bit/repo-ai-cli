@@ -1,5 +1,6 @@
 import type { Command } from "commander";
 import { runReadme } from "../commands/readme.js";
+import { runOnboard } from "../commands/onboard.js";
 import { runCommit } from "../commands/commit.js";
 import { runChangelog } from "../commands/changelog.js";
 import { runReview } from "../commands/review.js";
@@ -62,6 +63,47 @@ export const AI_COMMANDS: Record<string, CommandRegistrar> = {
           target,
           output: opts.output as string,
           language: opts.language as "bilingual" | "zh" | "en",
+          dryRun: Boolean(opts.dryRun),
+          maxTokens: resolveNumber(cmd, opts, "budgetTokens", cfg.maxTokens),
+          maxFileKb: resolveNumber(cmd, opts, "maxFileKb", cfg.maxFileKb),
+          maxOutputTokens: resolveNumber(cmd, opts, "maxOutputTokens", cfg.maxOutputTokens),
+          temperature: resolveNumber(cmd, opts, "temperature", cfg.temperature),
+          json: Boolean(opts.json),
+          stream: Boolean(opts.stream),
+          provider: opts.provider as string | undefined,
+          baseUrl: opts.baseUrl as string | undefined,
+          model: opts.model as string | undefined,
+          apiKey: opts.apiKey as string | undefined,
+          profile: opts.profile as string | undefined,
+          resolvedConfig: cfg,
+        });
+      } catch (err) {
+        handleError(err, Boolean(opts.json));
+      }
+    });
+  },
+
+  onboard(program) {
+    withLLMOptions(
+      program
+        .command("onboard")
+        .description("Generate an ONBOARDING.md guide for new maintainers (AI)")
+        .argument("[path]", "local directory path (default: current dir)", ".")
+        .option("-o, --output <file>", "output file", "ONBOARDING.md")
+        .option("--dry-run", "print stats only, do not call API")
+        .option("--budget-tokens <n>", "token budget for collected files", intOption(), 48000)
+        .addOption(deprecatedOption("--max-tokens <n>", "budget-tokens", intOption()))
+        .option("--max-file-kb <n>", "max single-file size in KB", intOption(), 100)
+        .option("--max-output-tokens <n>", "max LLM output tokens", intOption(), 8192)
+        .option("--temperature <n>", "sampling temperature 0~2", temperatureOption(), 0.5)
+        .option("--stream", "stream output token by token (TTY only)")
+        .option("--json", "output machine-readable JSON"),
+    ).action(async (target: string, opts: Record<string, unknown>, cmd: Command) => {
+      try {
+        const cfg = await loadConfig(opts.profile as string | undefined);
+        await runOnboard({
+          target,
+          output: opts.output as string,
           dryRun: Boolean(opts.dryRun),
           maxTokens: resolveNumber(cmd, opts, "budgetTokens", cfg.maxTokens),
           maxFileKb: resolveNumber(cmd, opts, "maxFileKb", cfg.maxFileKb),

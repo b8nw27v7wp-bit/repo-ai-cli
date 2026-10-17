@@ -53,6 +53,19 @@ describe("collectFiles", () => {
     expect(files.map((f) => f.relPath)).toEqual(["small.ts"]);
   });
 
+  it("因体积跳过时经 onSizeSkipped 上报路径与大小", async () => {
+    await makeTree({
+      "big.ts": "x".repeat(200 * 1024),
+      "small.ts": "ok",
+    });
+    const skipped: Array<[string, number]> = [];
+    await collectFiles(tmp, {
+      maxFileBytes: 100 * 1024,
+      onSizeSkipped: (rel, size) => skipped.push([rel, size]),
+    });
+    expect(skipped).toEqual([["big.ts", 200 * 1024]]);
+  });
+
   it("跳过非白名单扩展名", async () => {
     await makeTree({
       "a.ts": "code",
@@ -154,6 +167,21 @@ describe("collectFiles", () => {
     });
     expect(files.map((f) => f.relPath)).toEqual(["app.ts", "phrase.yaml"]);
     expect(skipped).toEqual(["leak.json"]);
+  });
+
+  it("contentSecretScan=false 时只按文件名过滤（离线索引不外发内容）", async () => {
+    await makeTree({
+      ".env": "TOKEN=abcdef1234567890\n",
+      "service.json": '{"apiKey": "abcdef1234567890"}\n',
+      "app.ts": "export const a = 1;\n",
+    });
+    const skipped: string[] = [];
+    const files = await collectFiles(tmp, {
+      contentSecretScan: false,
+      onSensitiveSkipped: (rel) => skipped.push(rel),
+    });
+    expect(files.map((f) => f.relPath)).toEqual(["app.ts", "service.json"]);
+    expect(skipped).toEqual([".env"]);
   });
 
   it("不误杀代码引用、测试桩与文件名含 secret 的源码", async () => {

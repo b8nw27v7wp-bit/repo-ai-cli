@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
@@ -110,7 +110,9 @@ export async function makeGitRepo(
   git(["config", "user.email", "test@test.com"], dir);
   git(["config", "user.name", "test"], dir);
   for (const [rel, content] of Object.entries(initial)) {
-    await writeFile(path.join(dir, rel), content);
+    const full = path.join(dir, rel);
+    await mkdir(path.dirname(full), { recursive: true });
+    await writeFile(full, content);
   }
   git(["add", "."], dir);
   git(["commit", "-m", "init"], dir);

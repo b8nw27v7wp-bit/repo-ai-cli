@@ -147,6 +147,11 @@ const ENTRY_PATTERNS: RegExp[] = [
   /^lib\/index\./, /^lib\/main\./,
 ];
 
+/** 是否为常见入口文件（map 命令用来列出「从哪读起」）。 */
+export function isEntryPoint(relPath: string): boolean {
+  return ENTRY_PATTERNS.some((re) => re.test(relPath.toLowerCase()));
+}
+
 function detectPriority(relPath: string): Priority {
   const lower = relPath.toLowerCase();
   if (PRIORITY1_FILES.has(lower)) return 1;
@@ -363,7 +368,10 @@ export async function collectFiles(
     } catch {
       continue;
     }
-    if (stat.size > maxBytes) continue;
+    if (stat.size > maxBytes) {
+      options.onSizeSkipped?.(rel, stat.size);
+      continue;
+    }
     let content: string;
     try {
       content = await fs.readFile(path.join(rootDir, rel), "utf8");
@@ -371,8 +379,10 @@ export async function collectFiles(
       continue; // 无法按 UTF-8 读取 → 跳过
     }
     if (looksBinary(content)) continue;
-    // 内容级：拦下含明文密钥的文件，避免把它发给第三方 LLM
-    if (hasSecretContent(content)) {
+    // 内容级：拦下含明文密钥的文件，避免把它发给第三方 LLM。
+    // 离线结构索引（repo-index）传 contentSecretScan:false —— 它不外发内容，
+    // 过滤只会让含 fixture 的测试文件从影响面里消失。
+    if (options.contentSecretScan !== false && hasSecretContent(content)) {
       options.onSensitiveSkipped?.(rel);
       continue;
     }

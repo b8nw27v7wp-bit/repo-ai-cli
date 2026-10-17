@@ -36,4 +36,16 @@ describe("buildFileTree", () => {
     expect(tree).toContain("c/");
     expect(tree).toContain("d.ts");
   });
+
+  it("maxDepth 截断深层内容并标记 …", () => {
+    const tree = buildFileTree(["a/b/c/d.ts", "a/top.ts"], "r", { maxDepth: 1 });
+    expect(tree).toContain("a/ …");
+    expect(tree).not.toContain("b/");
+    expect(tree).not.toContain("d.ts");
+  });
+
+  it("maxDepth 为 0 时只画根并标记", () => {
+    const tree = buildFileTree(["a/b.ts"], "r", { maxDepth: 0 });
+    expect(tree).toBe("r …");
+  });
 });

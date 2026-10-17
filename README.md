@@ -1,8 +1,8 @@
 # repo-ai-cli
 
-**AI-powered repository helper CLI: 24 commands to generate bilingual READMEs, conventional commits, CHANGELOGs, code reviews, tests, docs, PRs and more — plus offline utilities for secrets, stats, deps audit, gitignore, LICENSE, badges and git hooks.**
+**AI-powered repository helper CLI: 28 commands to generate bilingual READMEs, onboarding guides, conventional commits, CHANGELOGs, code reviews, tests, docs and PRs — plus offline repository intelligence (map, change impact, health audit) and utilities for secrets, stats, deps audit, gitignore, LICENSE, badges and git hooks.**
 
-**AI 驱动的仓库助手 CLI：24 条命令覆盖仓库全流程 —— 生成双语 README、规范 commit、CHANGELOG、代码审查、单元测试、文档翻译、PR 描述、代码库问答，以及密钥扫描、仓库统计、依赖审计、.gitignore / LICENSE / 徽章 / 贡献指南生成、git 钩子等离线工具。**
+**AI 驱动的仓库助手 CLI：28 条命令覆盖仓库全流程 —— 生成双语 README、上手导读、规范 commit、CHANGELOG、代码审查、单元测试、文档翻译、PR 描述、代码库问答，以及仓库地图、变更影响分析、健康审计等离线仓库智能，和密钥扫描、仓库统计、依赖审计、.gitignore / LICENSE / 徽章 / 贡献指南生成、git 钩子等工具。**
 
 [![CI](https://github.com/b8nw27v7wp-bit/repo-ai-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/b8nw27v7wp-bit/repo-ai-cli/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/repo-ai-cli.svg)](https://www.npmjs.com/package/repo-ai-cli)
@@ -47,7 +47,7 @@ npx repo-ai-cli secrets   # 离线扫描硬编码密钥
 npx repo-ai-cli stats     # 行数 / 语言 / 提交统计
 ```
 
-准备长期使用时再 `npm install -g repo-ai-cli`；完整安装、Key 配置与全部 24 条命令见下方 Quick Start — 快速开始。
+准备长期使用时再 `npm install -g repo-ai-cli`；完整安装、Key 配置与全部 28 条命令见下方 Quick Start — 快速开始。
 
 ---
 
@@ -88,6 +88,18 @@ npx repo-ai-cli stats     # 行数 / 语言 / 提交统计
 
 - 📄 **Scaffolding Utilities** — `gitignore` (16 bundled language templates), `license` (6 OSS licenses), `stats` (LOC/language/commit stats) and `deps` (dependency listing) — all offline.
   **脚手架工具集** — `gitignore`（16 套语言模板）、`license`（6 套开源许可）、`stats`（行数/语言/提交统计）、`deps`（依赖清单）—— 全离线。
+
+- 🗺️ **Repository Map** — `repo-ai-cli map` gives you a one-screen overview of any repository: language breakdown, detected entry points, module groups and a depth-limited directory tree. Fully offline.
+  **仓库地图** — `repo-ai-cli map` 一屏看清仓库：语言分布、入口文件、模块分组与限深目录树，完全离线。
+
+- 🎯 **Change Impact Analysis** — `repo-ai-cli impact <files>` builds a file-level import graph and tells you which files and tests are affected by a change. Use `--diff` to analyze staged changes directly.
+  **变更影响分析** — `repo-ai-cli impact <files>` 基于文件级 import 图，反向找出受影响的文件与测试；`--diff` 可直接分析暂存改动。
+
+- 🏥 **Repository Health Audit** — `repo-ai-cli health` checks community files, CI workflows, tests, package metadata, large files and secret findings in one pass, with `--strict` for CI. Offline by default; `--network` adds npm outdated/audit.
+  **仓库健康审计** — `repo-ai-cli health` 一次检查社区文件、CI、测试、包元数据、大文件与疑似密钥，`--strict` 可接入 CI；默认离线，`--network` 才检查依赖更新与漏洞。
+
+- 🧭 **Onboarding Guide** — `repo-ai-cli onboard` generates an `ONBOARDING.md` that explains the architecture, key modules, request flow, how to run tests and where to start changing code — grounded in real file paths.
+  **上手导读** — `repo-ai-cli onboard` 生成 `ONBOARDING.md`，讲清架构、关键模块、请求流、如何跑测试、从哪里开始改，且只引用真实文件路径。
 
 - 🌐 **Document Translation** — `repo-ai-cli translate` turns docs between Chinese and English (or bilingual) while preserving code blocks and structure.
   **文档翻译** — `repo-ai-cli translate` 在中文/英文/双语之间翻译文档，保留代码块与结构。
@@ -140,8 +152,8 @@ npx repo-ai-cli stats     # 行数 / 语言 / 提交统计
 - 🏅 **Badges & Contributing Generators** — `badges` detects your CI workflow / npm package / license / node engines and emits ready-to-paste README badges; `contributing` scaffolds a zh/en CONTRIBUTING.md with your repo details auto-filled.
   **徽章与贡献指南生成** — `badges` 自动探测 CI workflow / npm 包 / LICENSE / Node 版本并生成可直接粘贴的 README 徽章；`contributing` 生成中英双语 CONTRIBUTING.md 并自动填充仓库信息。
 
-- 🧪 **Comprehensive Testing** — 236+ unit and end-to-end tests covering file filtering, token budgeting, git integration, LLM error handling (incl. streaming), secret scanning, semantic versioning, provider resolution, config profiles, git hooks, npm audit parsing, badge/contributing generation, option validation, UI output hygiene, and more.
-  **全面测试覆盖** — 236+ 单元测试与端到端测试，覆盖文件过滤、Token 预算、Git 集成、LLM 错误处理（含流式）、密钥扫描、语义化版本、提供商解析、配置 Profile、git 钩子、npm 审计解析、徽章/贡献指南生成、参数校验、输出纯净等核心逻辑。
+- 🧪 **Comprehensive Testing** — 500+ unit and end-to-end tests covering file filtering, token budgeting, git integration, LLM error handling (incl. streaming), secret scanning, semantic versioning, provider resolution, config profiles, git hooks, npm audit parsing, repository indexing, badge/contributing generation, option validation, UI output hygiene, and more.
+  **全面测试覆盖** — 500+ 单元测试与端到端测试，覆盖文件过滤、Token 预算、Git 集成、LLM 错误处理（含流式）、密钥扫描、语义化版本、提供商解析、配置 Profile、git 钩子、npm 审计解析、仓库索引、徽章/贡献指南生成、参数校验、输出纯净等核心逻辑。
 
 ---
 
@@ -585,6 +597,25 @@ repo-ai-cli commit --json
 | `--api-key <key>` | API key (prefer env vars) | env var |
 | `--profile <name>` | 使用指定配置 profile（见 Config Profiles） | active profile |
 
+#### `repo-ai-cli onboard`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `[path]` | Local directory to analyze | `.` (current directory) |
+| `-o, --output <file>` | Output file path | `ONBOARDING.md` |
+| `--dry-run` | Print statistics only, do not call the API | `false` |
+| `--budget-tokens <n>` | Token budget for collected files (was `--max-tokens`, deprecated) | `48000` |
+| `--max-file-kb <n>` | Maximum single-file size to include (in KB) | `100` |
+| `--max-output-tokens <n>` | Maximum LLM output tokens | `8192` |
+| `--temperature <n>` | Sampling temperature (0–2) | `0.5` |
+| `--stream` | Stream output token-by-token (TTY only) | `false` |
+| `--json` | Output machine-readable JSON | `false` |
+| `--provider <id>` | LLM provider (same as `readme`) | auto-detect |
+| `--base-url <url>` | Custom OpenAI-compatible endpoint | provider default |
+| `--model <name>` | Model name override | provider default |
+| `--api-key <key>` | API key (prefer env vars) | env var |
+| `--profile <name>` | 使用指定配置 profile（见 Config Profiles） | active profile |
+
 #### `repo-ai-cli commit`
 
 | Option | Description | Default |
@@ -765,6 +796,33 @@ per-provider API key status (offline), proxy env vars. Fix hints included.
 |--------|-------------|---------|
 | `[path]` | Directory to analyze | `.` (current directory) |
 | `--since <date>` | Only count commits since this date (`YYYY-MM-DD`, inclusive) | full history |
+| `--json` | Output machine-readable JSON | `false` |
+
+#### `repo-ai-cli map`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `[path]` | Directory to analyze | `.` (current directory) |
+| `--depth <n>` | Maximum directory-tree depth (root = 0) | `3` |
+| `--focus <path>` | Only map a subdirectory/module | full repo |
+| `--json` | Output machine-readable JSON | `false` |
+
+#### `repo-ai-cli impact`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `[files...]` | Changed files to analyze | staged changes |
+| `--diff` | Use staged changes (default when no files are given) | `false` |
+| `--depth <n>` | Reverse dependency depth | `2` |
+| `--json` | Output machine-readable JSON | `false` |
+
+#### `repo-ai-cli health`
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `[path]` | Directory to audit | `.` (current directory) |
+| `--strict` | Exit 1 on warnings too (for CI) | `false` |
+| `--network` | Also run `npm outdated` / `npm audit` | `false` (offline) |
 | `--json` | Output machine-readable JSON | `false` |
 
 #### `repo-ai-cli deps`

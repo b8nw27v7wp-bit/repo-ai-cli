@@ -1,10 +1,14 @@
 /**
  * 从文件相对路径列表生成 text tree（省 token 的目录树）。
  * 只展示收集到的文件，目录自动折叠。
+ *
+ * @param options.maxDepth 最大展示深度（root 为 0）。超出的目录行追加 ` …`
+ *   表示「下面还有内容」，而不是静默截断——静默截断会让人误以为目录是空的。
  */
 export function buildFileTree(
   relPaths: string[],
   rootName = ".",
+  options: { maxDepth?: number } = {},
 ): string {
   interface Node {
     name: string;
@@ -29,14 +33,24 @@ export function buildFileTree(
     }
   }
 
+  const maxDepth = options.maxDepth;
   const lines: string[] = [];
-  const render = (node: Node, prefix: string, isLast: boolean) => {
+  const render = (
+    node: Node,
+    prefix: string,
+    isLast: boolean,
+    depth: number,
+  ) => {
+    if (maxDepth !== undefined && depth > maxDepth) return;
     const isRoot = node === root;
+    const truncated =
+      maxDepth !== undefined && depth === maxDepth && node.children.size > 0;
     lines.push(
       `${prefix}${isRoot ? "" : isLast ? "└── " : "├── "}${node.name}${
         node.isFile ? "" : isRoot ? "" : "/"
-      }`,
+      }${truncated ? " …" : ""}`,
     );
+    if (truncated) return;
     const entries = [...node.children.entries()];
     entries.sort(([a], [b]) => {
       const aDir = !node.children.get(a)!.isFile;
@@ -48,10 +62,10 @@ export function buildFileTree(
       const last = idx === entries.length - 1;
       const childPrefix =
         node === root ? "" : `${prefix}${isLast ? "    " : "│   "}`;
-      render(child, childPrefix, last);
+      render(child, childPrefix, last, depth + 1);
     });
   };
 
-  render(root, "", true);
+  render(root, "", true, 0);
   return lines.join("\n");
 }

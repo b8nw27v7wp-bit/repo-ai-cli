@@ -14,12 +14,12 @@ import pkg from "../../package.json" with { type: "json" };
  * 却会改掉 --help 的展示顺序——那就不再是可证明的无副作用重构了。
  * 顺序显式写在这里，而不是由两个注册文件的调用先后隐式决定。
  *
- * 注：README「Command Options」的小节顺序与此基本一致，唯 `config` 一节在 README 里
- * 排在最末、这里排在中段（拆分前就是这样）。属于既有的文档顺序小分歧，未在本次一并调整。
+ * README「Command Options」的小节顺序必须与这里一致（docs:check 会校验）。
  */
 export const COMMAND_ORDER = [
   // 生成类
   "readme",
+  "onboard",
   "commit",
   "changelog",
   "review",
@@ -33,6 +33,9 @@ export const COMMAND_ORDER = [
   "gitignore",
   "license",
   "stats",
+  "map",
+  "impact",
+  "health",
   "deps",
   // 代码理解类
   "translate",
@@ -54,7 +57,7 @@ const REGISTRY: Record<string, CommandRegistrar> = {
 };
 
 /**
- * 组装 CLI：顶层 program、全局 option、preAction 钩子，以及 24 条命令的注册。
+ * 组装 CLI：顶层 program、全局 option、preAction 钩子，以及 28 条命令的注册。
  *
  * description 里的命令总数会被 scripts/check-docs.mjs 与实际注册数比对——
  * 加命令时忘了改这里，docs:check 会直接红，不会静默漂移。
@@ -64,7 +67,7 @@ export function buildProgram(): Command {
 
   program
     .name("repo-ai-cli")
-    .description("AI-powered repo helper: 24 commands — README, commit, changelog, review, review-pr, explain, pr, init, secrets, doctor, gitignore, license, stats, deps, translate, test, refactor, hooks, ask, fix, release, badges, contributing, config")
+    .description("AI-powered repo helper: 28 commands — README, onboard, commit, changelog, review, review-pr, explain, pr, init, secrets, doctor, gitignore, license, stats, map, impact, health, deps, translate, test, refactor, hooks, ask, fix, release, badges, contributing, config")
     .version(pkg.version)
     .option("--verbose", "debug output to stderr (network, config, provider resolution)");
 

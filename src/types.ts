@@ -21,6 +21,20 @@ export interface CollectOptions {
    * 用于调用方 warn 上报——被排除的文件不会进 LLM 材料，静默丢弃会让用户困惑。
    */
   onSensitiveSkipped?: (relPath: string) => void;
+  /**
+   * 每发现一个因超过 maxFileBytes 被跳过的文件就回调一次。
+   * `health` 用它统计「大文件」；不传时行为与之前完全一致。
+   */
+  onSizeSkipped?: (relPath: string, sizeBytes: number) => void;
+  /**
+   * 是否做内容级明文密钥扫描（默认 true）。
+   *
+   * 只有「内容会发给 LLM」的场景（readme/ask/fix/onboard 的材料）才需要它。
+   * 离线结构分析（map/impact/health 的索引）只读取文件元数据与 import，
+   * 不外发内容——若在这里也过滤，含测试密钥 fixture 的测试文件会被排除，
+   * 导致影响面漏报（本仓库的 scan-secrets.test.ts 就是现成例子）。
+   */
+  contentSecretScan?: boolean;
 }
 
 export type IncludeMode = "full" | "sample" | "skip";
@@ -202,6 +216,54 @@ export interface StatsOptions {
   since?: string;
   /** JSON 输出（脚本友好） */
   json?: boolean;
+}
+
+export interface MapOptions {
+  /** 目录（默认当前目录） */
+  target?: string;
+  /** 目录树最大深度（root 为 0） */
+  depth: number;
+  /** 只看某个子目录/模块 */
+  focus?: string;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface ImpactOptions {
+  /** 变更文件（相对路径或绝对路径）；缺省且未传 --diff 时按 --diff 处理 */
+  targets?: string[];
+  /** 从暂存区改动读取变更文件 */
+  diff?: boolean;
+  /** 反向依赖层数 */
+  depth: number;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface HealthOptions {
+  /** 目录（默认当前目录） */
+  target?: string;
+  /** warn 也视为失败（CI 用） */
+  strict?: boolean;
+  /** 额外运行 npm outdated / audit（默认离线） */
+  network?: boolean;
+  /** JSON 输出（脚本友好） */
+  json?: boolean;
+}
+
+export interface OnboardOptions extends AiCommandBase {
+  /** 目标目录，默认 "." */
+  target: string;
+  /** 输出文件，默认 ONBOARDING.md */
+  output?: string;
+  /** dry-run：只打印将发送的材料统计，不调用 API */
+  dryRun?: boolean;
+  /** 材料 token 预算（CLI > 配置 maxTokens > 内置默认） */
+  maxTokens: number;
+  /** 单文件上限 KB（CLI > 配置 maxFileKb > 内置默认） */
+  maxFileKb: number;
+  /** 流式输出（TTY 下边生成边打印） */
+  stream?: boolean;
 }
 
 export interface DepsOptions {

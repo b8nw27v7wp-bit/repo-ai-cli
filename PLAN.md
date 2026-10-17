@@ -366,6 +366,7 @@ jobs:
 | ~~P2~~ ✅ | `--verbose` 全局调试 | v0.6.0 完成：统一 debug 日志（stderr），覆盖网络/配置/克隆 |
 | ~~P2~~ ✅ | 配置文件 profile | v0.6.0 完成：多套 provider/model 配置切换（`config use work` / `--profile work`） |
 | ~~P2~~ ✅ | GitHub PR review | v0.7.0 完成：`review-pr <pr>` 经 GitHub 公开 API 拉取 PR diff（原生 fetch，无需 gh CLI、零新增依赖），prompt / 分级 / 截断语义与 `review` 共用；`--json` 附带 PR 元信息 |
+| ~~P1~~ ✅ | 仓库级智能（v0.10 完成） | `map` 仓库地图 / `impact` 变更影响分析 / `health` 仓库健康审计 / `onboard` 上手导读——把仓库当作有结构的对象分析，离线优先、零新增运行时依赖；详见 `docs/专项拓展计划-v0.10.md` |
 
 ---
 
@@ -386,8 +387,8 @@ jobs:
 ## 10. 简历条目（预写）
 
 > **repo-ai-cli** — TypeScript CLI 工具（npm 发布，GitHub Actions 自动 CI/CD）
-> 24 条命令覆盖仓库助手全场景：AI 生成双语 README / 规范 commit / CHANGELOG / 代码审查 / 线上 PR 审查（可回写评论） / 解释 / PR 描述 / 文档翻译 / 单元测试 / 重构建议 / bug 定位 / 代码库问答（RAG） / README 徽章 / 贡献指南，以及离线的密钥扫描 / 环境体检 / .gitignore / LICENSE / 仓库统计 / 依赖解析（--outdated / --audit）/ 项目脚手架 / git 钩子 / 语义化版本发布；实现 token 预算控制、.gitignore 感知文件收集、敏感文件与明文密钥过滤、LLM 重试与流式输出、token 用量可观测、GitHub 仓库浅克隆（含镜像回退）、多 profile 配置切换、--verbose 调试日志；支持 13 家国内外 LLM 提供商（DeepSeek/OpenAI/Kimi/GLM/通义/MiniMax/Grok/硅基流动/Ollama 本地/OpenRouter/Groq/火山方舟/Gemini）及任意 OpenAI 兼容端点；BYOK 零服务端成本；436 单测 + 19 项 dist 级端到端冒烟覆盖核心逻辑与命令接线。
+> 28 条命令覆盖仓库助手全场景：AI 生成双语 README / 上手导读 / 规范 commit / CHANGELOG / 代码审查 / 线上 PR 审查（可回写评论） / 解释 / PR 描述 / 文档翻译 / 单元测试 / 重构建议 / bug 定位 / 代码库问答（RAG） / README 徽章 / 贡献指南，以及离线的仓库地图 / 变更影响分析 / 健康审计 / 密钥扫描 / 环境体检 / .gitignore / LICENSE / 仓库统计 / 依赖解析（--outdated / --audit）/ 项目脚手架 / git 钩子 / 语义化版本发布；实现 token 预算控制、.gitignore 感知文件收集、敏感文件与明文密钥过滤、文件级 import 图与反向依赖分析、LLM 重试与流式输出、token 用量可观测、GitHub 仓库浅克隆（含镜像回退）、多 profile 配置切换、--verbose 调试日志；支持 13 家国内外 LLM 提供商（DeepSeek/OpenAI/Kimi/GLM/通义/MiniMax/Grok/硅基流动/Ollama 本地/OpenRouter/Groq/火山方舟/Gemini）及任意 OpenAI 兼容端点；BYOK 零服务端成本；505 单测 + 36 项 dist 级端到端冒烟覆盖核心逻辑与命令接线。
 
 ---
 
-*计划版本：v1.0 · 2026-07-31 · M1-M15 已全部完成（24 条命令 / 13 家 provider）；v0.8 完善计划（命令层测试补全、参数命名统一、index.ts 拆分、e2e 基线、token 用量可观测、review-pr 回写评论）已落地，详见 `docs/完善计划-v0.8.md`。当前口径：436 单测 + 19 项 dist 级 e2e 冒烟；本文件后续变更需同步更新*
+*计划版本：v1.0 · 2026-07-31 · M1-M15 已全部完成（24 条命令 / 13 家 provider）；v0.8 完善计划、v0.9 架构收敛计划与 v0.10 仓库级智能专项（`map` / `impact` / `health` / `onboard`，命令数 24 → 28）均已落地，详见 `docs/完善计划-v0.8.md`、`docs/完善计划-v0.9.md`、`docs/专项拓展计划-v0.10.md` 与 `docs/交接文档.md`。当前口径：505 单测 + 36 项 dist 级 e2e 冒烟 + 行覆盖 73.24%；本文件后续变更需同步更新*

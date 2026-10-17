@@ -5,6 +5,9 @@ import { runDoctor } from "../commands/doctor.js";
 import { runGitignore } from "../commands/gitignore.js";
 import { runLicense } from "../commands/license.js";
 import { runStats } from "../commands/stats.js";
+import { runMap } from "../commands/map.js";
+import { runImpact } from "../commands/impact.js";
+import { runHealth } from "../commands/health.js";
 import { runDeps } from "../commands/deps.js";
 import {
   runHooksInstall,
@@ -88,7 +91,7 @@ export const OFFLINE_COMMANDS: Record<string, CommandRegistrar> = {
   doctor(program) {
     program
       .command("doctor")
-      .description("Check the CLI environment & repo health (offline)")
+      .description("Check the CLI environment: Node, git, config, keys, proxy (offline)")
       .option("--json", "output machine-readable JSON")
       .action(async (opts: Record<string, unknown>) => {
         try {
@@ -157,6 +160,72 @@ export const OFFLINE_COMMANDS: Record<string, CommandRegistrar> = {
           await runStats({
             target,
             since: opts.since as string | undefined,
+            json: Boolean(opts.json),
+          });
+        } catch (err) {
+          handleError(err, Boolean(opts.json));
+        }
+      });
+  },
+
+  map(program) {
+    program
+      .command("map")
+      .description("Show a repository map: entry points, module groups, tree (offline)")
+      .argument("[path]", "directory to analyze (default: current dir)", ".")
+      .option("--depth <n>", "max tree depth (root = 0)", intOption(0), 3)
+      .option("--focus <path>", "only map a subdirectory/module")
+      .option("--json", "output machine-readable JSON")
+      .action(async (target: string, opts: Record<string, unknown>) => {
+        try {
+          await runMap({
+            target,
+            depth: opts.depth as number,
+            focus: opts.focus as string | undefined,
+            json: Boolean(opts.json),
+          });
+        } catch (err) {
+          handleError(err, Boolean(opts.json));
+        }
+      });
+  },
+
+  impact(program) {
+    program
+      .command("impact")
+      .description("Find files and tests affected by changes via import graph (offline)")
+      .argument("[files...]", "changed files (default: staged changes)")
+      .option("--diff", "use staged changes (default when no files are given)")
+      .option("--depth <n>", "reverse dependency depth", intOption(1), 2)
+      .option("--json", "output machine-readable JSON")
+      .action(async (files: string[], opts: Record<string, unknown>) => {
+        try {
+          await runImpact({
+            targets: files,
+            diff: Boolean(opts.diff),
+            depth: opts.depth as number,
+            json: Boolean(opts.json),
+          });
+        } catch (err) {
+          handleError(err, Boolean(opts.json));
+        }
+      });
+  },
+
+  health(program) {
+    program
+      .command("health")
+      .description("Audit repository health: community files, CI, tests, metadata, secrets (offline)")
+      .argument("[path]", "directory to audit (default: current dir)", ".")
+      .option("--strict", "exit 1 on warnings too (for CI)")
+      .option("--network", "also run npm outdated / audit (requires network)")
+      .option("--json", "output machine-readable JSON")
+      .action(async (target: string, opts: Record<string, unknown>) => {
+        try {
+          await runHealth({
+            target,
+            strict: Boolean(opts.strict),
+            network: Boolean(opts.network),
             json: Boolean(opts.json),
           });
         } catch (err) {

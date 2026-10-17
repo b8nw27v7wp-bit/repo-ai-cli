@@ -1,3 +1,9 @@
+import {
+  collectHeadings,
+  findPlaceholderIssues,
+  stripCode,
+} from "./doc-validate.js";
+
 /**
  * README 落盘前的轻量结构校验（P1-1）。
  *
@@ -18,29 +24,8 @@ export interface ReadmeValidation {
   issues: string[];
 }
 
-/** 去掉围栏代码块与行内代码，降低占位符误报 */
-function stripCode(content: string): string {
-  return content.replace(/```[\s\S]*?```/g, " ").replace(/`[^`\n]*`/g, " ");
-}
-
 /** 功能特性章节的标题匹配（中英文任一即可） */
 const FEATURE_HEADING_RE = /(功能|特性|features?|capabilities|highlights)/i;
-
-/** 未填充占位符模式（按约定刻意不含 TODO） */
-const PLACEHOLDER_PATTERNS: Array<{ re: RegExp; label: string }> = [
-  { re: /\bTBD\b/i, label: "TBD" },
-  { re: /\bFIXME\b/i, label: "FIXME" },
-  { re: /\bXXXX+\b/, label: "XXXX" },
-  { re: /待(?:补充|填写|完善|添加|更新)/, label: "待补充类占位" },
-  { re: /\{\{[^}\n]+\}\}/, label: "{{...}} 模板占位" },
-  { re: /<(?:your|insert|replace|待填)[^>\n]*>/i, label: "<your-...> 尖括号占位" },
-];
-
-/** 截断展示用的命中片段 */
-function snippet(s: string): string {
-  const t = s.trim();
-  return t.length > 30 ? `${t.slice(0, 30)}…` : t;
-}
 
 /**
  * 校验 README 内容的结构完整性。
@@ -57,20 +42,14 @@ export function validateReadmeStructure(content: string): ReadmeValidation {
   }
 
   // 2. 功能特性章节（任意级别的标题命中即可）
-  const headings = Array.from(
-    prose.matchAll(/^#{1,6}\s+(.+)$/gm),
-    (m) => (m[1] ?? "").trim(),
-  );
+  const headings = collectHeadings(prose);
   if (!headings.some((h) => FEATURE_HEADING_RE.test(h))) {
     issues.push("缺少功能特性章节（标题应包含「功能特性 / Features」等字样）");
   }
 
   // 3. 占位符残留（TODO 不算）
-  for (const { re, label } of PLACEHOLDER_PATTERNS) {
-    const hit = re.exec(prose);
-    if (hit) {
-      issues.push(`存在未填充占位符残留（${label}）: "${snippet(hit[0])}"`);
-    }
+  for (const { label, snippet } of findPlaceholderIssues(prose)) {
+    issues.push(`存在未填充占位符残留（${label}）: "${snippet}"`);
   }
 
   return { ok: issues.length === 0, issues };

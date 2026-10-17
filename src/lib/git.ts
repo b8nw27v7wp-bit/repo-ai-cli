@@ -189,6 +189,46 @@ const DIFF_PATHSPEC = [
   ":(exclude)yarn.lock",
 ];
 
+export interface StagedChange {
+  /** git 状态：A / M / D / R100 / C75 … */
+  status: string;
+  /** 变更后的路径；删除时为被删路径 */
+  path: string;
+  /** 重命名/复制前的路径 */
+  oldPath?: string;
+}
+
+/**
+ * 列出暂存区改动（含状态与重命名的旧路径）。
+ *
+ * 为什么不用 getDiff().files：diff 头只给 a 侧路径，纯重命名会只剩旧路径、
+ * 删除只给已不存在的路径——impact 需要同时知道「旧路径（谁还在 import 它）」
+ * 与「新路径（它自己影响了谁）」。
+ */
+export async function getStagedChanges(cwd: string): Promise<StagedChange[]> {
+  await assertInGitRepo(cwd);
+  const raw = await runGit(
+    ["diff", "--cached", "--name-status", "-z", ...DIFF_PATHSPEC],
+    cwd,
+  );
+  const parts = raw.split("\0");
+  const changes: StagedChange[] = [];
+  let i = 0;
+  while (i < parts.length) {
+    const status = parts[i++];
+    if (!status) continue;
+    if (status[0] === "R" || status[0] === "C") {
+      const oldPath = parts[i++];
+      const newPath = parts[i++];
+      if (newPath) changes.push({ status, path: newPath, oldPath });
+    } else {
+      const p = parts[i++];
+      if (p) changes.push({ status, path: p });
+    }
+  }
+  return changes;
+}
+
 /** 列出 untracked 文件（相对路径，.gitignore 生效） */
 async function getUntrackedFiles(cwd: string): Promise<string[]> {
   try {
@@ -419,6 +459,13 @@ export async function getGitUserName(cwd: string): Promise<string> {
   } catch {
     return "";
   }
+}
+
+/** 仓库工作区根目录（git rev-parse --show-toplevel） */
+export async function getRepoRoot(cwd: string): Promise<string> {
+  await assertInGitRepo(cwd);
+  const out = await runGit(["rev-parse", "--show-toplevel"], cwd);
+  return path.resolve(out.trim());
 }
 
 /** git 目录绝对路径（.git，兼容 worktree/submodule） */

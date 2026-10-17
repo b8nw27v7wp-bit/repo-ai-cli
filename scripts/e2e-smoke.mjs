@@ -61,6 +61,35 @@ const dirty = path.join(work, "dirty");
 mkdirSync(dirty, { recursive: true });
 writeFileSync(path.join(dirty, "key.txt"), `token = "AKIA${"C".repeat(16)}"\n`);
 
+/** 健康仓库（供 health 全绿用例） */
+const healthy = path.join(work, "healthy");
+mkdirSync(path.join(healthy, ".github", "workflows"), { recursive: true });
+mkdirSync(path.join(healthy, "src"), { recursive: true });
+mkdirSync(path.join(healthy, "test"), { recursive: true });
+writeFileSync(path.join(healthy, "README.md"), "# healthy\n");
+writeFileSync(path.join(healthy, "LICENSE"), "MIT\n");
+writeFileSync(path.join(healthy, ".gitignore"), "node_modules/\n");
+writeFileSync(path.join(healthy, "CONTRIBUTING.md"), "# contributing\n");
+writeFileSync(path.join(healthy, "CHANGELOG.md"), "# changelog\n");
+writeFileSync(path.join(healthy, ".github", "workflows", "ci.yml"), "name: CI\n");
+writeFileSync(
+  path.join(healthy, "package.json"),
+  JSON.stringify(
+    {
+      name: "healthy-demo",
+      description: "demo",
+      keywords: ["demo"],
+      repository: "https://example.com/demo.git",
+      engines: { node: ">=20" },
+      license: "MIT",
+    },
+    null,
+    2,
+  ) + "\n",
+);
+writeFileSync(path.join(healthy, "src", "index.ts"), "export const a = 1;\n");
+writeFileSync(path.join(healthy, "test", "a.test.ts"), "export const t = 1;\n");
+
 /**
  * 本地假 LLM 端点。
  *
@@ -69,6 +98,8 @@ writeFileSync(path.join(dirty, "key.txt"), `token = "AKIA${"C".repeat(16)}"\n`);
  * 没有它，配置里的 temperature / maxOutputTokens 只能靠人肉读代码确认。
  */
 const CANNED_README = "# demo\n\nA tiny demo project.\n\n## Features\n\n- `add(a, b)`\n";
+const CANNED_ONBOARDING =
+  "# demo\n\n## 架构\n\n- `src/index.ts` 是入口。\n\n## 运行与测试\n\n```bash\nnpm test\n```\n";
 let lastRequest = null;
 const server = createServer((req, res) => {
   let raw = "";
@@ -79,10 +110,12 @@ const server = createServer((req, res) => {
     } catch {
       lastRequest = { url: req.url, body: null };
     }
+    // 同一端点服务多条 AI 命令：按 system prompt 里的关键词选择固定回复
+    const content = raw.includes("ONBOARDING") ? CANNED_ONBOARDING : CANNED_README;
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(
       JSON.stringify({
-        choices: [{ message: { content: CANNED_README } }],
+        choices: [{ message: { content } }],
         usage: { prompt_tokens: 111, completion_tokens: 22, total_tokens: 133 },
       }),
     );
@@ -183,10 +216,14 @@ function assert(cond, msg) {
 // ── 顶层表面 ──────────────────────────────────────────────────────────────
 await step("--version 输出版本号", ["--version"], { out: [pkg.version] });
 
-await step("--help 列出全部 24 条命令", ["--help"], {
+await step("--help 列出全部 28 条命令", ["--help"], {
   out: [
-    "24 commands",
+    "28 commands",
     "readme",
+    "onboard",
+    "map",
+    "impact",
+    "health",
     "review-pr",
     "config",
     "contributing",
@@ -210,6 +247,48 @@ await step("secrets 命中时退出码 1（CI 门禁依赖）", ["secrets", dirt
   json: (o) => {
     assert(o.ok === false, "ok 应为 false");
     assert(o.count > 0, "count 应大于 0");
+  },
+});
+
+// ── 仓库级智能（v0.10） ─────────────────────────────────────────────────────
+await step("map --json 输出仓库地图", ["map", demo, "--json"], {
+  json: (o) => {
+    assert(o.ok === true, "ok 应为 true");
+    assert(o.totals.files > 0, "files 应大于 0");
+    assert(o.groups.some((g) => g.name === "src"), "应含 src 分组");
+    assert(o.entryPoints.includes("src/index.ts"), "应识别入口文件");
+  },
+});
+
+await step("impact --json 分析指定文件", ["impact", "src/index.ts", "--json"], {
+  cwd: demo,
+  json: (o) => {
+    assert(o.ok === true, "ok 应为 true");
+    assert(o.targets.includes("src/index.ts"), "targets 应含 src/index.ts");
+    assert(Array.isArray(o.direct), "direct 应为数组");
+  },
+});
+
+await step("health --json 健康仓库全绿", ["health", healthy, "--json"], {
+  json: (o) => {
+    assert(o.ok === true, "ok 应为 true");
+    assert(o.summary.fail === 0, `不应有 fail，实际 ${o.summary.fail}`);
+  },
+});
+
+await step("health 对缺 LICENSE 的目录退出 1", ["health", demo, "--json"], {
+  code: 1,
+  json: (o) => {
+    assert(o.ok === false, "ok 应为 false");
+    assert(o.summary.fail > 0, "应至少有一个 fail");
+  },
+});
+
+await step("onboard 走完整 LLM 链路并落盘", ["onboard", demo, "-o", path.join(work, "ONBOARDING.md"), "--json"], {
+  env: LLM_ENV,
+  json: (o) => {
+    assert(o.ok === true, "ok 应为 true");
+    assert(existsSync(o.output), "ONBOARDING 应已落盘");
   },
 });
 

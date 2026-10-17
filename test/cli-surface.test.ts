@@ -32,10 +32,13 @@ describe("CLI 命令登记", () => {
     expect(() => buildProgram()).not.toThrow();
   });
 
-  it("顶层命令数为 24，且与 description 里声称的数字一致", () => {
+  it("顶层命令数为 28，且与 description 里声称的数字一致", () => {
     const program = buildProgram();
     const commands = program.commands.filter((c) => c.name() !== "help");
-    expect(commands).toHaveLength(24);
+    expect(commands).toHaveLength(28);
+    expect(commands.map((c) => c.name())).toEqual(
+      expect.arrayContaining(["map", "impact", "health", "onboard"]),
+    );
 
     const claimed = program.description().match(/(\d+)\s+commands?/)?.[1];
     expect(Number(claimed)).toBe(commands.length);
