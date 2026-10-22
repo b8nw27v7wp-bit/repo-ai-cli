@@ -1,6 +1,6 @@
 {
   "name": "repo-ai-cli",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "AI repo CLI: bilingual README, CHANGELOG, commit/review/test/PR via your own LLM key; offline secrets scan, stats & deps audit",
   "main": "./dist/index.js",
   "scripts": {
