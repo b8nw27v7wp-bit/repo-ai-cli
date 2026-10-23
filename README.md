@@ -14,6 +14,53 @@
 
 ---
 
+## 它能做什么
+
+28 条命令，按「要不要 LLM」分成四类，外加接入方式。
+
+### 一、让 AI 帮你写（需要 Key）
+
+- `readme` 中英双语 README（任意本地目录或 GitHub 仓库，`--dry-run` 先看统计不调 API）
+- `onboard` 生成 `ONBOARDING.md`：架构、关键模块、请求流、怎么跑测试、从哪开始改，只引用真实文件路径
+- `commit` 从 diff 生成 Conventional Commits 信息，`--print` 便于脚本调用；配 `hooks install` 后 `git commit` 自动生成
+- `changelog` 从最近 tag 到 HEAD 整理成 Keep a Changelog 风格
+- `pr` 生成 PR 标题与正文（可 `--create` 直接调 `gh` 建 PR）
+- `translate` 文档中英互译或双语，保留代码块与结构
+- `test` 为文件生成 Vitest / Jest / node:test 单元测试，覆盖正常/边界/异常
+- `refactor` 按收益排序的重构建议（不改变行为）
+- `fix` 描述一个 bug，定位根因并给结构化修复建议
+- `ask` 代码库问答（RAG）：检索相关文件后结合真实代码回答，引用函数与文件
+
+### 二、让 AI 帮你审（需要 Key）
+
+- `review` 审查 git diff，输出 Critical / Major / Minor / Nit 分级报告，可聚焦 bug / 安全 / 风格 / 性能
+- `review-pr owner/repo#123` 直接审线上 GitHub PR，**不需要装 `gh` CLI**
+- `explain file:line` 讲清一段代码在做什么、为什么这么做
+
+### 三、离线仓库智能（零 Key、零网络，可进 CI）
+
+- `map` 一屏看清仓库：语言分布、入口文件、模块分组、限深目录树
+- `impact <files>` 基于文件级 import 图反向找出受影响的文件与测试，`--diff` 直接分析暂存改动
+- `health` 一次检查社区文件、CI、测试、包元数据、大文件与疑似密钥，`--strict` 接 CI；`--network` 才查依赖更新与漏洞
+- `secrets` 扫硬编码凭据（GitHub / AWS / Slack / OpenAI / 私钥…），分级 + 打码，非零退出码可拦 CI
+- `stats` 行数 / 语言 / 提交统计；`deps` 依赖清单；`deps --outdated --audit` 包一层 npm
+- `doctor` 环境体检：Node 版本、git 仓库、配置文件合法性、激活 profile、13 家 provider 的 Key 状态（只做离线前缀检查，绝不真实调 API）、代理设置，附修复建议
+
+### 四、脚手架与发布（零 Key）
+
+- `init` 生成可构建的 TypeScript CLI / 库骨架（tsup + vitest）
+- `gitignore`（16 套语言模板）、`license`（6 套开源许可，自动填作者与年份）、`badges`、`contributing`
+- `hooks install` 装 `prepare-commit-msg` 钩子
+- `release` 依据提交建议下一个 semver，`--bump --tag` 直接改版本并打 tag
+
+### 五、接入方式
+
+BYOK，**13 家 LLM 提供商**（DeepSeek / OpenAI / Kimi / GLM / 通义千问 / MiniMax / Grok / 硅基流动 / Ollama 本地免 key / OpenRouter / Groq / 火山方舟 / Gemini）+ 任意 OpenAI 兼容端点；多套配置 profile 一键切换（`config set` 持久化，不必每次设环境变量）；`--json` 脚本友好、`--stream` 流式输出；三层文件优先级 + 采样做 Token 预算；文件名敏感（`.env*`、私钥、证书）或内容命中凭据模式的文件**不会进入发给 LLM 的材料**并逐个上报。
+
+**技术栈**：TypeScript + Node.js ≥ 20，CLI 基于 commander / clack，零运行时框架依赖；npm 包 `repo-ai-cli`（当前 v0.8.0），505 项测试 + GitHub Actions CI + Release 自动发 npm。详见下方 [Tech Stack — 技术栈](#-tech-stack--技术栈)。
+
+---
+
 ## 三分钟上手 — Three-Minute Quickstart
 
 无需安装：一条 npx 命令 + 一个环境变量即可跑通（需 Node.js ≥ 20）。
